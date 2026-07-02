@@ -3,8 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ShoppingCart, User, LogOut, BookOpen } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+
+
 
 const Navbar = () => {
+  const { getCartCount } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
@@ -20,6 +24,7 @@ const Navbar = () => {
     { name: 'Home', path: '/' },
     { name: 'About', path: '/about' },
     { name: 'Books', path: '/books' },
+     { name: 'Wishlist', path: '/wishlist' },
     { name: 'Contact', path: '/contact' },
   ];
 
@@ -59,12 +64,18 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                <Link to="/cart" className="relative p-2 text-gray-700 hover:text-teal-600 transition-colors">
-                  <ShoppingCart className="w-6 h-6" />
-                  <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    0
-                  </span>
-                </Link>
+               <Link to="/cart" className="relative p-2 text-gray-700 hover:text-teal-600 transition-colors">
+              <ShoppingCart className="w-6 h-6" />
+                   {getCartCount() > 0 && (
+                       <motion.span
+                           initial={{ scale: 0 }}
+                             animate={{ scale: 1 }}
+                 className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                      >
+                       {getCartCount()}
+                                          </motion.span>
+                                      )}
+                                        </Link>
 
                 <div className="relative">
                   <button
