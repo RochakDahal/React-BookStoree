@@ -81,7 +81,7 @@ const Profile = () => {
                   transition={{ delay: index * 0.1 }}
                   className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl"
                 >
-                  <div className="w-10 h-10 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center shrink-0">
                     <item.icon className="text-white w-5 h-5" />
                   </div>
                   <div>
