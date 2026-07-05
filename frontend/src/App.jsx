@@ -13,6 +13,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Wishlist from './pages/Wishlist';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop, { ScrollToTopButton } from './components/ScrollToTop';
 import './index.css';
@@ -43,6 +44,7 @@ function App() {
                   {/* Protected Routes */}
                   <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
                   <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 </Routes>
                 
                 {/* Floating scroll to top button */}
