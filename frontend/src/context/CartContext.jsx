@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
+
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) throw new Error('useCart must be used within CartProvider');
@@ -14,6 +15,18 @@ export const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const clearCart = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    await axios.delete('http://localhost:5000/api/cart/clear', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setCartItems([]);
+  } catch (error) {
+    console.error('Error clearing cart:', error);
+  }
+};
+
 
   useEffect(() => {
     if (user) {
@@ -102,7 +115,7 @@ export const CartProvider = ({ children }) => {
       removeFromCart,
       getCartTotal,
       getCartCount,
-      fetchCart
+      fetchCart,
     }}>
       {children}
     </CartContext.Provider>
