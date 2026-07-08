@@ -26,11 +26,11 @@ function App() {
           <Router>
             {/* Scroll to top on route change */}
             <ScrollToTop />
-            
+
             <div className="min-h-screen flex flex-col">
               {/* Navbar is now INSIDE CartProvider and WishlistProvider */}
               <Navbar />
-              
+
               <main className="grow">
                 <Routes>
                   <Route path="/" element={<Home />} />
@@ -40,17 +40,21 @@ function App() {
                   <Route path="/books/:id" element={<BookDetails />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
-                  
+
                   {/* Protected Routes */}
                   <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
                   <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+                  <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                  <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
+                  <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+                  <Route path="/orders/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 </Routes>
-                
+
                 {/* Floating scroll to top button */}
                 <ScrollToTopButton />
               </main>
-              
+
               <Footer />
             </div>
           </Router>
