@@ -21,12 +21,16 @@ import Contact from './pages/Contact';
 
 import Cart from './pages/Cart';
 import Wishlist from './pages/Wishlist';
+
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import OrderDetails from './pages/OrderDetails';
 import Profile from './pages/Profile';
 import MyOrders from './pages/MyOrders';
 
+import Profile from './pages/Profile';
+import ProtectedRoute from './components/ProtectedRoute';
+import ScrollToTop, { ScrollToTopButton } from './components/ScrollToTop';
 import './index.css';
 
 function App() {
@@ -81,9 +85,18 @@ function App() {
                   <Route 
                     path="/profile" 
                     element={<ProtectedRoute><Profile /></ProtectedRoute>} 
-                  />
-
+    ></Route>              
                   
+
+                  {/* Protected Routes */}
+                  <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+                  <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+                  <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                  <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
+                  <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+                  <Route path="/orders/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
                 </Routes>
                 
                 
