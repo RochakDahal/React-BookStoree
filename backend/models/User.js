@@ -1,4 +1,3 @@
-// backend/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -18,20 +17,7 @@ const userSchema = new mongoose.Schema({
   gender: {
     type: String,
     required: [true, 'Gender is required'],
-    enum: ['male', 'female', 'other', 'prefer not to say'],
-    // ✅ Auto-convert to lowercase
-    set: function(value) {
-      const genderMap = {
-        'Male': 'male',
-        'Female': 'female',
-        'Other': 'other',
-        'Prefer Not to Say': 'prefer not to say',
-        'M': 'male',
-        'F': 'female',
-        'O': 'other'
-      };
-      return genderMap[value] || value?.toLowerCase() || 'prefer not to say';
-    }
+    enum: ['male', 'female', 'other', 'prefer-not']
   },
   address: {
     type: String,
@@ -50,7 +36,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters'],
-    select: false
+    select: false // ️ This hides password from normal queries
   },
   role: {
     type: String,
@@ -65,32 +51,28 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ HASHING - This works perfectly!
-userSchema.pre('save', function(next) {
-  const user = this;
-  
-  if (!user.isModified('password')) {
+// ⚠️ CRITICAL: Hash password BEFORE saving to database
+userSchema.pre('save', async function(next) {
+  // Only hash if password is modified (not on every save)
+  if (!this.isModified('password')) {
     return next();
   }
-  
-  bcrypt.genSalt(10, function(err, salt) {
-    if (err) return next(err);
-    
-    bcrypt.hash(user.password, salt, function(err, hash) {
-      if (err) return next(err);
-      
-      user.password = hash;
-      next();
-    });
-  });
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
-// ✅ Compare password - This works perfectly!
-userSchema.methods.comparePassword = function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+// Method to compare entered password with hashed password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Virtual field
+// Virtual for full name
 userSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
