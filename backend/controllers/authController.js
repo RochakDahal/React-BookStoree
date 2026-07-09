@@ -63,7 +63,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    // Check for user
+    // ⚠️ CRITICAL FIX: You MUST add .select('+password') to get the hashed password
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
