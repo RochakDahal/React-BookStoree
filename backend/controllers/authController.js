@@ -51,49 +51,39 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate email & password
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Please provide email and password' });
-    }
-
-    // ⚠️ CRITICAL FIX: You MUST add .select('+password') to get the hashed password
+    // 1. Find the user
+    // ️ CRITICAL: You MUST add .select('+password') here!
     const user = await User.findOne({ email }).select('+password');
     
+    // Debugging: Check your terminal. If user.password is undefined, this is the fix.
+    // console.log("Found user:", user.email, "Password exists:", !!user.password);
+
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Check if password matches
+    // 2. Compare passwords
     const isMatch = await user.comparePassword(password);
     
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Generate token
+    // 3. Success
     const token = generateToken(user._id);
-
     res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role
-      }
+      user: { id: user._id, firstName: user.firstName, email: user.email }
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
