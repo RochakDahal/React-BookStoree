@@ -28,6 +28,8 @@ app.use('/api/contact', require('./routes/contactRoutes')); // Comment out if mi
 // Add these lines after other route imports
 app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
+// Add this line with other routes
+
 
 // ✅ CORRECT Error handler - NO next() after sending response
 app.use((err, req, res, next) => {
