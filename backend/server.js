@@ -3,6 +3,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+// 1. Body Parser Middleware (CRITICAL for reading JSON)
+
 
 dotenv.config();
 
@@ -14,7 +16,9 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/bookshell'
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+// 1. Body Parser Middleware (CRITICAL for reading JSON)
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: false }));
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'BookShell API is running' });
