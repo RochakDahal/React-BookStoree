@@ -57,7 +57,7 @@ const OrderDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50 py-12">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-teal-50 py-12">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <Link to="/orders" className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium mb-8">
           <ArrowLeft className="w-5 h-5" /> Back to Orders
@@ -69,7 +69,7 @@ const OrderDetails = () => {
           className="bg-white rounded-2xl shadow-lg overflow-hidden"
         >
           
-          <div className="bg-gradient-to-r from-teal-500 to-cyan-500 p-6 text-white">
+          <div className="bg-linear-to-r from-teal-500 to-cyan-500 p-6 text-white">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
