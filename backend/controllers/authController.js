@@ -13,7 +13,8 @@ const generateToken = (id) => {
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, gender, address, email, password } = req.body;
+    // ✅ CRITICAL: Extract ALL fields including city and phone
+    const { firstName, lastName, gender, address, city, phone, email, password } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -21,12 +22,14 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Create user
+    // ✅ CRITICAL: Pass ALL fields to User.create
     const user = await User.create({
       firstName,
       lastName,
       gender,
       address,
+      city,      // <-- Saved to DB
+      phone,     // <-- Saved to DB
       email,
       password
     });
@@ -47,33 +50,31 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ Registration Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Find the user
-    // ️ CRITICAL: You MUST add .select('+password') here!
-    const user = await User.findOne({ email }).select('+password');
+    // Force lowercase email and explicitly select the hidden password field
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     
-    // Debugging: Check your terminal. If user.password is undefined, this is the fix.
-    // console.log("Found user:", user.email, "Password exists:", !!user.password);
-
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // 2. Compare passwords
     const isMatch = await user.comparePassword(password);
     
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // 3. Success
     const token = generateToken(user._id);
     res.status(200).json({
       success: true,
@@ -103,6 +104,8 @@ exports.getMe = async (req, res) => {
         email: user.email,
         gender: user.gender,
         address: user.address,
+        city: user.city,
+        phone: user.phone,
         role: user.role,
         createdAt: user.createdAt
       }

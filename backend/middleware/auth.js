@@ -4,25 +4,30 @@ const User = require('../models/User');
 exports.protect = async (req, res, next) => {
   let token;
 
+  // 1. Check if header exists and starts with 'Bearer'
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    // 2. Extract the token
     token = req.headers.authorization.split(' ')[1];
   }
 
   if (!token) {
-    return res.status(401).json({ message: 'Not authorized to access this route' });
+    return res.status(401).json({ success: false, message: 'Not authorized, no token provided' });
   }
 
   try {
+    // 3. Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // 4. Attach user to request (THIS IS CRITICAL for req.user.id)
     req.user = await User.findById(decoded.id);
     
     if (!req.user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
-    
+
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Not authorized, token failed' });
+    return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
   }
 };
 
