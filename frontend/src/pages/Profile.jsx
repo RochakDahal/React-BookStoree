@@ -1,95 +1,73 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { User, Mail, MapPin, Phone, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { motion } from 'framer-motion';
+import { User, Mail, Phone, MapPin, Home, Calendar } from 'lucide-react';
 
 const Profile = () => {
-  const { user, loading } = useAuth();
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    gender: '',
-    address: ''
-  });
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        gender: user.gender || '',
-        address: user.address || ''
-      });
-    }
-  }, [user]);
-
-  if (loading) return <LoadingSpinner fullScreen />;
-  if (!user) return null;
-
-  const infoItems = [
-    { icon: User, label: 'Full Name', value: `${formData.firstName} ${formData.lastName}` },
-    { icon: Mail, label: 'Email', value: formData.email },
-    { icon: Phone, label: 'Gender', value: formData.gender?.charAt(0).toUpperCase() + formData.gender?.slice(1) },
-    { icon: MapPin, label: 'Address', value: formData.address },
-    { icon: Calendar, label: 'Member Since', value: new Date(user.createdAt).toLocaleDateString() }
-  ];
+  if (!user) return <div className="text-center py-20">Loading profile...</div>;
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-teal-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-teal-50 py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl font-bold text-gray-900 mb-8"
+          className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
-          My Profile
-        </motion.h1>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg overflow-hidden"
-        >
-          {/* Profile Header */}
-          <div className="bg-linear-to-r from-teal-500 to-cyan-500 p-8 text-white">
-            <div className="flex items-center gap-6">
-              <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <User className="w-12 h-12 text-white" />
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold">{formData.firstName} {formData.lastName}</h2>
-                <p className="text-teal-100 mt-1">{formData.email}</p>
-                <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-sm font-semibold">
-                  {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
-                </span>
-              </div>
+          {/* Header */}
+          <div className="bg-linear-to-r from-teal-500 to-cyan-500 px-8 py-10 text-white text-center">
+            <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white/30">
+              <User className="w-12 h-12 text-white" />
             </div>
+            <h1 className="text-3xl font-bold">{user.firstName} {user.lastName}</h1>
+            <p className="text-teal-100 mt-1 capitalize">{user.role} Account</p>
           </div>
 
-          {/* Profile Info */}
-          <div className="p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Personal Information</h3>
+          {/* Details */}
+          <div className="p-8 space-y-6">
+            <h2 className="text-xl font-bold text-gray-800 border-b pb-3">Personal Information</h2>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {infoItems.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl"
-                >
-                  <div className="w-10 h-10 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center shrink-0">
-                    <item.icon className="text-white w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">{item.label}</p>
-                    <p className="font-semibold text-gray-900">{item.value || 'Not provided'}</p>
-                  </div>
-                </motion.div>
-              ))}
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-teal-500 mt-1" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Email</p>
+                  <p className="text-gray-800 font-medium">{user.email}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <Phone className="w-5 h-5 text-teal-500 mt-1" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Phone</p>
+                  <p className="text-gray-800 font-medium">{user.phone || 'Not provided'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Home className="w-5 h-5 text-teal-500 mt-1" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">City</p>
+                  <p className="text-gray-800 font-medium">{user.city || 'Not provided'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Calendar className="w-5 h-5 text-teal-500 mt-1" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Member Since</p>
+                  <p className="text-gray-800 font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 pt-4 border-t">
+              <MapPin className="w-5 h-5 text-teal-500 mt-1" />
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Full Address</p>
+                <p className="text-gray-800 font-medium">{user.address || 'Not provided'}</p>
+              </div>
             </div>
           </div>
         </motion.div>

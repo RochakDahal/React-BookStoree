@@ -1,47 +1,46 @@
-// backend/routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+// Add this at the top with your other imports
+const { protect } = require('../middleware/auth'); 
 
-// ✅ Register - NO next() used
+// Helper function to generate token (if you have it in a separate file, keep your import)
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || '30d'
+  });
+};
+
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, email, password, gender, address } = req.body;
+    // 👇 CRITICAL: Extract city and phone from req.body 👇
+    const { firstName, lastName, gender, address, city, phone, email, password } = req.body;
 
-    // Validate
-    if (!firstName || !lastName || !email || !password || !gender || !address) {
-      return res.status(400).json({
-        success: false,
-        message: 'All fields are required'
-      });
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
-    // Check existing user
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists'
-      });
-    }
-
-    // Create user
+    // 👇 CRITICAL: Pass city and phone to User.create 👇
     const user = await User.create({
       firstName,
       lastName,
-      email: email.toLowerCase(),
-      password,
       gender,
-      address
+      address,
+      city,      // <-- ADDED
+      phone,     // <-- ADDED
+      email,
+      password
     });
 
     // Generate token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
@@ -51,101 +50,85 @@ router.post('/register', async (req, res) => {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
-        fullName: user.fullName,
         email: user.email,
-        gender: user.gender,
-        address: user.address,
         role: user.role
       }
     });
-
   } catch (error) {
     console.error('❌ Registration Error:', error);
-    
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: errors
-      });
-    }
-
-    // Handle duplicate key
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already exists'
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Registration failed'
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ✅ Login - NO next() used
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
-      });
-    }
-
-    // Find user with password
+    // Find user and explicitly select the hidden password field
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
+    
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({
+    const token = generateToken(user._id);
+    res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
+      user: { id: user._id, firstName: user.firstName, email: user.email }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @desc    Get current logged in user
+// @route   GET /api/auth/me
+// @access  Private
+// (Assuming you have a 'protect' middleware imported)
+// router.get('/me', protect, async (req, res) => { ... });
+
+// @desc    Get current logged in user profile
+// @route   GET /api/auth/me
+// @access  Private
+router.get('/me', protect, async (req, res) => {
+  try {
+    // req.user.id is injected by the 'protect' middleware
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
       user: {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
-        fullName: user.fullName,
         email: user.email,
         gender: user.gender,
         address: user.address,
-        role: user.role
+        city: user.city,
+        phone: user.phone,
+        role: user.role,
+        createdAt: user.createdAt
       }
     });
-
   } catch (error) {
-    console.error('❌ Login Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Login failed'
-    });
+    console.error('❌ Get Me Error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

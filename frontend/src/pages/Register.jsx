@@ -2,11 +2,19 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, MapPin, Eye, EyeOff, BookOpen, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, MapPin, Eye, EyeOff, BookOpen, ArrowRight, Phone, Home } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', gender: '', address: '', email: '', password: '', confirmPassword: ''
+    firstName: '',
+    lastName: '',
+    gender: '',
+    address: '',
+    city: '',       
+    phone: '',     
+    email: '',
+    password: '',
+    confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -20,6 +28,9 @@ const Register = () => {
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    else if (!/^[0-9]{10}$/.test(formData.phone)) newErrors.phone = 'Please enter a valid 10-digit phone number';
     if (!formData.email) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email';
     if (!formData.password) newErrors.password = 'Password is required';
@@ -35,7 +46,10 @@ const Register = () => {
     if (validate()) {
       setLoading(true);
       try {
+        // ✅ Remove confirmPassword before sending to backend
         const { confirmPassword, ...registerData } = formData;
+        
+        // Pass the entire registerData object to AuthContext
         await register(registerData);
         navigate('/');
       } catch (error) {
@@ -115,36 +129,58 @@ const Register = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input type="email" name="email" value={formData.email} onChange={handleChange}
-                  className={`w-full pl-10 pr-3 py-2.5 bg-white border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm`} placeholder="john@example.com" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input type="email" name="email" value={formData.email} onChange={handleChange}
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm`} placeholder="john@example.com" />
+                </div>
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border ${errors.phone ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm`} placeholder="98XXXXXXXX" />
+                </div>
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Street Address</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
                 <textarea name="address" value={formData.address} onChange={handleChange} rows="2"
-                  className={`w-full pl-10 pr-3 py-2.5 bg-white border ${errors.address ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm resize-none`} placeholder="123 Book Street, City" />
+                  className={`w-full pl-10 pr-3 py-2.5 bg-white border ${errors.address ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm resize-none`} placeholder="House no, Street, Landmark..." />
               </div>
               {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>
-              <select name="gender" value={formData.gender} onChange={handleChange}
-                className={`w-full px-3 py-2.5 bg-white border ${errors.gender ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm`}>
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-              {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">City</label>
+                <div className="relative">
+                  <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange}
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border ${errors.city ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm`} placeholder="Kathmandu" />
+                </div>
+                {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>
+                <select name="gender" value={formData.gender} onChange={handleChange}
+                  className={`w-full px-3 py-2.5 bg-white border ${errors.gender ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm`}>
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+                {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

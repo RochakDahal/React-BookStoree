@@ -24,6 +24,22 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Address is required'],
     trim: true
   },
+  
+  // 👇 NEW FIELDS ADDED HERE 👇
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true,
+    match: [/^[0-9]{10}$/, 'Please provide a valid 10-digit phone number'] 
+  },
+  city: {
+    type: String,
+    required: [true, 'City is required'],
+    trim: true,
+    maxlength: [50, 'City name cannot exceed 50 characters']
+  },
+  // 👆 NEW FIELDS ADDED HERE 👆
+
   email: {
     type: String,
     required: [true, 'Email is required'],
@@ -36,7 +52,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters'],
-    select: false // ️ This hides password from normal queries
+    select: false // Hides password from normal queries
   },
   role: {
     type: String,
@@ -51,13 +67,11 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ⚠️ CRITICAL: Hash password BEFORE saving to database
+// Hash password BEFORE saving to database
 userSchema.pre('save', async function(next) {
-  // Only hash if password is modified (not on every save)
   if (!this.isModified('password')) {
     return next();
   }
-
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
