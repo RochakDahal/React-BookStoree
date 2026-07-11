@@ -19,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 // 1. Body Parser Middleware (CRITICAL for reading JSON)
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: false }));
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'BookShell API is running' });
@@ -33,7 +34,8 @@ app.use('/api/contact', require('./routes/contactRoutes')); // Comment out if mi
 app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 // Add this line with other routes
-
+// Add this line with other routes
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 // ✅ CORRECT Error handler - NO next() after sending response
 app.use((err, req, res, next) => {
