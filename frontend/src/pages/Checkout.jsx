@@ -59,7 +59,7 @@ const Checkout = () => {
   const deliveryFee = getCartTotal() > 1000 ? 0 : 100;
   const total = getCartTotal() + deliveryFee;
 
-  const handlePlaceOrder = async (e) => {
+    const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -77,12 +77,25 @@ const Checkout = () => {
         totalPrice: total
       };
 
+      // 1. Create the order in the backend (Status: Pending)
       const res = await axios.post('http://localhost:5000/api/orders', orderData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      await clearCart();
-      navigate('/order-success', { state: { orderId: res.data.order.orderNumber } });
+      const newOrder = res.data.order;
+      await clearCart(); // Clear cart immediately
+
+      // 2. Route based on payment method
+      if (paymentMethod === 'cod') {
+        // For COD, go directly to success
+        navigate('/order-success', { state: { orderId: newOrder.orderNumber } });
+      } else if (paymentMethod === 'esewa') {
+        // Redirect to eSewa page with order data
+        navigate('/payment/esewa', { state: { order: newOrder } });
+      } else if (paymentMethod === 'stripe') {
+        // Redirect to Stripe page with order data
+        navigate('/payment/stripe', { state: { order: newOrder } });
+      }
     } catch (error) {
       console.error('Error placing order:', error);
       alert(error.response?.data?.message || 'Failed to place order');
