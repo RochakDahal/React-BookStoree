@@ -21,6 +21,10 @@ import OrderSuccess from './pages/OrderSuccess';
 import OrderDetails from './pages/OrderDetails';
 import Profile from './pages/Profile';
 import MyOrders from './pages/MyOrders';
+import PaymentEsewa from './pages/PaymentEsewa';
+import EsewaSuccess from './pages/EsewaSuccess';
+import CheckoutStripe from './pages/CheckoutStripe';
+import PaymentLoader from './components/PaymentLoader';
 
 function App() {
   return (
@@ -54,6 +58,10 @@ function App() {
                   <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
                   <Route path="/orders/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/payment/esewa" element={<ProtectedRoute><PaymentEsewa /></ProtectedRoute>} />
+                  <Route path="/payment/esewa/success" element={<ProtectedRoute><EsewaSuccess /></ProtectedRoute>} />
+                  <Route path="/payment/esewa/failure" element={<ProtectedRoute><PaymentLoader method="eSewa" status="failed" /></ProtectedRoute>} />
+                  <Route path="/payment/stripe" element={<ProtectedRoute><CheckoutStripe /></ProtectedRoute>} />
                 </Routes>
                 
                 {/* Floating scroll to top button */}
