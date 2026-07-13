@@ -1,3 +1,4 @@
+// backend/models/Wishlist.js
 const mongoose = require('mongoose');
 
 const wishlistSchema = new mongoose.Schema({
@@ -5,14 +6,13 @@ const wishlistSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true
   },
   books: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Book'
   }]
-}, {
-  timestamps: true
+}, { 
+  timestamps: true 
 });
 
 module.exports = mongoose.model('Wishlist', wishlistSchema);
