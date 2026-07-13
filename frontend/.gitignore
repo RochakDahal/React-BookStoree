@@ -29,8 +29,10 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.development
 backend/.env
 frontend/.env
+*.env
 
 # ============================================
 # UPLOADS & TEMP FILES
