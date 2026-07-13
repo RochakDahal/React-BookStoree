@@ -1,4 +1,30 @@
+// backend/models/Order.js
 const mongoose = require('mongoose');
+
+const orderItemSchema = new mongoose.Schema({
+  bookId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Book',
+    required: true
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  price: {
+    type: Number,
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  coverImage: {
+    type: String,
+    default: ''
+  }
+});
 
 const orderSchema = new mongoose.Schema({
   user: {
@@ -6,85 +32,53 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  items: [{
-    book: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Book',
-      required: true
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: [1, 'Quantity must be at least 1']
-    },
-    price: {
-      type: Number,
-      required: true
-    }
-  }],
-  shippingAddress: {
-    fullName: {
-      type: String,
-      required: [true, 'Full name is required']
-    },
-    address: {
-      type: String,
-      required: [true, 'Address is required']
-    },
-    city: {
-      type: String,
-      required: [true, 'City is required']
-    },
-    phone: {
-      type: String,
-      required: [true, 'Phone number is required']
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required']
-    }
-  },
-  paymentMethod: {
-    type: String,
-    required: [true, 'Payment method is required'],
-    enum: ['esewa', 'stripe', 'cod']
-  },
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'completed', 'failed'],
-    default: 'pending'
-  },
-  paymentId: {
-    type: String
-  },
-  orderStatus: {
-    type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
-    default: 'pending'
-  },
+  items: [orderItemSchema],
   totalPrice: {
     type: Number,
-    required: [true, 'Total price is required'],
-    min: [0, 'Total price cannot be negative']
+    required: true
   },
   deliveryFee: {
     type: Number,
-    default: 100
+    default: 0
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cod', 'esewa', 'stripe'],
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  orderStatus: {
+    type: String,
+    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+    default: 'pending'
+  },
+  shippingAddress: {
+    fullName: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String, required: true },
+    address: { type: String, required: true },
+    city: { type: String, required: true }
+  },
+  transactionId: {
+    type: String,
+    default: ''
   },
   orderNumber: {
     type: String,
-    required: true,
     unique: true
   }
 }, {
   timestamps: true
 });
 
-// Generate order number before saving
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
-    this.orderNumber = `ORD-${String(count + 1).padStart(4, '0')}`;
+    this.orderNumber = `ORD-${String(count + 1).padStart(6, '0')}`;
   }
   next();
 });

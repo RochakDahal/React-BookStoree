@@ -22,4 +22,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-backend/
+
+# ============================================
+# ENVIRONMENT FILES (NEVER COMMIT SECRETS)
+# ============================================
+.env
+.env.local
+.env.production
+.env.development
+backend/.env
+frontend/.env
+*.env
+
+# ============================================
+# UPLOADS & TEMP FILES
+# ============================================
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.tmp

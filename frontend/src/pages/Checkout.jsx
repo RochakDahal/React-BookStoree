@@ -1,41 +1,48 @@
+// src/pages/Checkout.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, CreditCard, Truck, CheckCircle, User, Phone, Mail, Home } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { 
+  ShoppingBag, CreditCard, Wallet, Truck, MapPin, Phone, Mail, User, Loader2
+} from 'lucide-react';
 
 const Checkout = () => {
-  const { user } = useAuth();
-  const { cartItems, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
+  const { cartItems, getTotal, clearCart } = useCart();
+  const { user, token } = useAuth();
   const [loading, setLoading] = useState(false);
-  
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [error, setError] = useState('');
+
+  const total = getTotal ? getTotal() : 0;
+  const deliveryFee = total > 1000 ? 0 : 100;
+  const grandTotal = total + deliveryFee;
+
   const [formData, setFormData] = useState({
     fullName: '',
-    address: '',
-    city: '',
+    email: '',
     phone: '',
-    email: ''
+    address: '',
+    city: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [errors, setErrors] = useState({});
 
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (user) {
       setFormData({
-      
-        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(), 
-        address: user.address || '',
-        city: user.city || '',
+        fullName: user.fullName || user.firstName + ' ' + user.lastName || '',
+        email: user.email || '',
         phone: user.phone || '',
-        email: user.email || ''
+        address: user.address || '',
+        city: user.city || ''
       });
     }
-  }, [user]); // Runs whenever the user data is loaded
+  }, [user]);
 
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -43,308 +50,417 @@ const Checkout = () => {
     }
   }, [cartItems, navigate]);
 
-  const validate = () => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
     const newErrors = {};
     if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (!formData.city.trim()) newErrors.city = 'City is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email';
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const deliveryFee = getCartTotal() > 1000 ? 0 : 100;
-  const total = getCartTotal() + deliveryFee;
-
-    const handlePlaceOrder = async (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validateForm()) return;
 
-    setLoading(true);
+    setSubmitting(true);
+    setError('');
+
     try {
-      const token = localStorage.getItem('token');
       const orderData = {
         items: cartItems.map(item => ({
-          book: item.book._id,
+          bookId: item.bookId?._id || item.bookId,
+          title: item.bookId?.title || item.title,
+          price: item.bookId?.price || item.price,
           quantity: item.quantity,
-          price: item.book.price
+          coverImage: item.bookId?.coverImage || item.coverImage
         })),
-        shippingAddress: formData,
-        paymentMethod,
-        totalPrice: total
+        totalPrice: grandTotal,
+        deliveryFee: deliveryFee,
+        paymentMethod: paymentMethod,
+        shippingAddress: {
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city
+        }
       };
 
-      // 1. Create the order in the backend (Status: Pending)
-      const res = await axios.post('http://localhost:5000/api/orders', orderData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      console.log('📤 Sending order data:', orderData);
 
-      const newOrder = res.data.order;
-      await clearCart(); // Clear cart immediately
+      const orderResponse = await axios.post(
+        'http://localhost:5000/api/orders',
+        orderData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      // 2. Route based on payment method
+      console.log('✅ Order created:', orderResponse.data);
+
+      const order = orderResponse.data.order;
+
+      // ✅ COD - Confirm immediately
       if (paymentMethod === 'cod') {
-        // For COD, go directly to success
-        navigate('/order-success', { state: { orderId: newOrder.orderNumber } });
-      } else if (paymentMethod === 'esewa') {
-        // Redirect to eSewa page with order data
-        navigate('/payment/esewa', { state: { order: newOrder } });
-      } else if (paymentMethod === 'stripe') {
-        // Redirect to Stripe page with order data
-        navigate('/payment/stripe', { state: { order: newOrder } });
+        await axios.post(
+          'http://localhost:5000/api/payments/cod-confirm',
+          { orderId: order._id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        await clearCart();
+        navigate('/payment-success', { 
+          state: { 
+            orderId: order._id,
+            amount: grandTotal,
+            paymentMethod: 'cod'
+          }
+        });
+        
+      } 
+      // ✅ eSewa - Form submission (DO NOT CHANGE)
+      else if (paymentMethod === 'esewa') {
+        console.log('🔄 Initiating eSewa payment...');
+        
+        const paymentResponse = await axios.post(
+          'http://localhost:5000/api/payments/initiate',
+          { 
+            orderId: order._id,
+            paymentGateway: 'esewa'
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log('✅ eSewa response:', paymentResponse.data);
+
+        if (paymentResponse.data.success) {
+          const formData = paymentResponse.data.formData;
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+
+          Object.entries(formData).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          await clearCart();
+          form.submit();
+        } else {
+          setError('Failed to initiate eSewa payment');
+          setSubmitting(false);
+        }
+      } 
+      // ✅ Stripe - Redirect like eSewa
+      else if (paymentMethod === 'stripe') {
+        console.log('🔄 Initiating Stripe Checkout...');
+        
+        const paymentResponse = await axios.post(
+          'http://localhost:5000/api/payments/initiate',
+          { 
+            orderId: order._id,
+            paymentGateway: 'stripe'
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log('✅ Stripe response:', paymentResponse.data);
+
+        if (paymentResponse.data.success && paymentResponse.data.sessionUrl) {
+          await clearCart();
+          // ✅ Redirect to Stripe Checkout page (like eSewa)
+          window.location.href = paymentResponse.data.sessionUrl;
+        } else {
+          setError(paymentResponse.data.message || 'Failed to initiate Stripe payment');
+          setSubmitting(false);
+        }
       }
-    } catch (error) {
-      console.error('Error placing order:', error);
-      alert(error.response?.data?.message || 'Failed to place order');
+
+    } catch (err) {
+      console.error('❌ Order error:', err);
+      console.error('❌ Error response:', err.response?.data);
+      setError(err.response?.data?.message || 'Failed to place order');
+      setSubmitting(false);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: '' });
-    }
-  };
-
-  if (cartItems.length === 0) return <LoadingSpinner fullScreen />;
+  const paymentMethods = [
+    { id: 'cod', icon: Truck, label: 'Cash on Delivery', color: 'orange' },
+    { id: 'esewa', icon: Wallet, label: 'eSewa', color: 'green' },
+    { id: 'stripe', icon: CreditCard, label: 'Stripe', color: 'purple' }
+  ];
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-teal-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h1
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl font-bold text-gray-900 mb-8"
+          className="mb-8"
         >
-          Checkout
-        </motion.h1>
+          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
+          <p className="text-gray-600">Complete your order details below</p>
+        </motion.div>
 
-        <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-          <div className="lg:col-span-2 space-y-6">
-            
-       
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden"
-            >
-              <div className="bg-linear-to-r from-teal-500 to-cyan-500 px-6 py-4 flex items-center gap-3">
-                <MapPin className="w-6 h-6 text-white" />
-                <h2 className="text-xl font-bold text-white">Shipping Address</h2>
-              </div>
-              
-              <div className="p-6 space-y-5">
-                {/* Row 1: Full Name & Phone */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="text"
-                        name="fullName"
-                        value={formData.fullName}
-                        onChange={handleChange}
-                        className={`w-full pl-11 pr-4 py-3 bg-gray-50 border ${errors.fullName ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-teal-500'} rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all`}
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    {errors.fullName && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><span>⚠</span> {errors.fullName}</p>}
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-2"
+          >
+            <form onSubmit={handlePlaceOrder} className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-teal-500" />
+                Shipping Address
+              </h2>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className={`w-full pl-11 pr-4 py-3 bg-gray-50 border ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-teal-500'} rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all`}
-                        placeholder="98XXXXXXXX"
-                      />
-                    </div>
-                    {errors.phone && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><span>⚠</span> {errors.phone}</p>}
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name *
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                        errors.fullName ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="John Doe"
+                    />
                   </div>
+                  {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
                 </div>
 
-               
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className={`w-full pl-11 pr-4 py-3 bg-gray-50 border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-teal-500'} rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all`}
-                      placeholder="you@example.com"
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                        errors.email ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="john@example.com"
                     />
                   </div>
-                  {errors.email && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><span>⚠</span> {errors.email}</p>}
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                 </div>
-
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Street Address *</label>
-                  <div className="relative">
-                    <Home className="absolute left-3 top-4 text-gray-400 w-5 h-5" />
-                    <textarea
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      rows="3"
-                      className={`w-full pl-11 pr-4 py-3 bg-gray-50 border ${errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-teal-500'} rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all resize-none`}
-                      placeholder="House no, Street, Landmark..."
-                    />
-                  </div>
-                  {errors.address && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><span>⚠</span> {errors.address}</p>}
-                </div>
-
-                {/* Row 4: City */}
-                <div className="md:w-1/2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">City *</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      className={`w-full pl-11 pr-4 py-3 bg-gray-50 border ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-teal-500'} rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all`}
-                      placeholder="Kathmandu"
-                    />
-                  </div>
-                  {errors.city && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><span>⚠</span> {errors.city}</p>}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* --- PAYMENT METHOD --- */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden"
-            >
-              <div className="bg-linear-to-r from-purple-500 to-pink-500 px-6 py-4 flex items-center gap-3">
-                <CreditCard className="w-6 h-6 text-white" />
-                <h2 className="text-xl font-bold text-white">Payment Method</h2>
-              </div>
-
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { id: 'esewa', name: 'eSewa', icon: '💳', color: 'border-green-500 bg-green-50' },
-                  { id: 'stripe', name: 'Stripe', icon: '💳', color: 'border-purple-500 bg-purple-50' },
-                  { id: 'cod', name: 'Cash on Delivery', icon: '💵', color: 'border-orange-500 bg-orange-50' }
-                ].map((method) => (
-                  <label
-                    key={method.id}
-                    className={`relative flex flex-col items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                      paymentMethod === method.id
-                        ? `${method.color} shadow-md`
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method.id}
-                      checked={paymentMethod === method.id}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="sr-only"
-                    />
-                    <span className="text-3xl mb-2">{method.icon}</span>
-                    <span className="font-semibold text-gray-900 text-center text-sm">{method.name}</span>
-                    {paymentMethod === method.id && (
-                      <div className="absolute top-2 right-2">
-                        <CheckCircle className="w-5 h-5 text-teal-500" />
-                      </div>
-                    )}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone *
                   </label>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-1"
-          >
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
-              
-              <div className="space-y-4 mb-6 max-h-64 overflow-y-auto pr-2">
-                {cartItems.map((item) => (
-                  <div key={item.book._id} className="flex gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <img
-                      src={item.book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&h=150&fit=crop'}
-                      alt={item.book.title}
-                      className="w-16 h-20 object-cover rounded-lg shadow-sm"
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                        errors.phone ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="9841234567"
                     />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{item.book.title}</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
-                      <p className="text-teal-600 font-bold text-sm mt-1">Rs. {(item.book.price * item.quantity).toFixed(2)}</p>
-                    </div>
                   </div>
-                ))}
+                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                      errors.city ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Kathmandu"
+                  />
+                  {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address *
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                      errors.address ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="123 Main Street"
+                  />
+                  {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+                </div>
               </div>
 
-              <div className="space-y-3 border-t border-gray-100 pt-4">
-                <div className="flex justify-between text-gray-600 text-sm">
-                  <span>Subtotal</span>
-                  <span>Rs. {getCartTotal().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-600 text-sm">
-                  <span>Delivery Fee</span>
-                  <span className={deliveryFee === 0 ? 'text-green-600 font-semibold' : ''}>
-                    {deliveryFee === 0 ? 'FREE' : `Rs. ${deliveryFee.toFixed(2)}`}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t border-gray-100">
-                  <span>Total</span>
-                  <span className="text-teal-600">Rs. {total.toFixed(2)}</span>
+              <div className="pt-4 border-t border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                  <CreditCard className="w-5 h-5 text-teal-500" />
+                  Payment Method
+                </h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {paymentMethods.map((method) => {
+                    const Icon = method.icon;
+                    const isSelected = paymentMethod === method.id;
+                    return (
+                      <motion.button
+                        key={method.id}
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setPaymentMethod(method.id)}
+                        className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
+                          isSelected
+                            ? `border-${method.color}-500 bg-${method.color}-50 shadow-md`
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isSelected 
+                            ? `bg-linear-to-r from-${method.color}-500 to-${method.color}-600 text-white` 
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className={`font-medium ${isSelected ? `text-${method.color}-700` : 'text-gray-700'}`}>
+                            {method.label}
+                          </p>
+                          {isSelected && (
+                            <motion.p
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="text-xs text-green-600"
+                            >
+                              ✓ Selected
+                            </motion.p>
+                          )}
+                        </div>
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={loading}
-                className="btn-primary w-full py-4 text-lg font-semibold mt-6 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-teal-500/30"
+                disabled={submitting}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={`w-full py-4 rounded-xl text-white font-semibold text-lg transition-all ${
+                  submitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-linear-to-r from-teal-500 to-cyan-500 hover:shadow-lg'
+                }`}
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Processing...
-                  </>
+                  </span>
                 ) : (
-                  <>
-                    <Truck className="w-5 h-5" /> Place Order
-                  </>
+                  `Place Order - Rs. ${grandTotal.toFixed(2)}`
                 )}
               </motion.button>
-              
-              {getCartTotal() < 1000 && (
-                <p className="text-center text-xs text-gray-500 mt-4">
-                  Add Rs. {(1000 - getCartTotal()).toFixed(2)} more for <span className="text-green-600 font-semibold">FREE delivery!</span>
-                </p>
-              )}
+            </form>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-1"
+          >
+            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                <ShoppingBag className="w-5 h-5 text-teal-500" />
+                Order Summary
+              </h2>
+
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                {cartItems.map((item, index) => (
+                  <motion.div
+                    key={item.bookId?._id || index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <img
+                      src={item.bookId?.coverImage || item.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=120&fit=crop'}
+                      alt={item.bookId?.title || item.title}
+                      className="w-12 h-16 object-cover rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.bookId?.title || item.title}</p>
+                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      Rs. {((item.bookId?.price || item.price || 0) * item.quantity).toFixed(2)}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="border-t border-gray-200 mt-4 pt-4 space-y-2">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span>Rs. {total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Delivery Fee</span>
+                  <span>{deliveryFee === 0 ? 'Free' : `Rs. ${deliveryFee.toFixed(2)}`}</span>
+                </div>
+                {deliveryFee === 0 && total > 0 && (
+                  <p className="text-xs text-green-600">Free delivery on orders over Rs. 1,000</p>
+                )}
+                <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold text-gray-900">
+                  <span>Total</span>
+                  <span className="text-teal-600">Rs. {grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           </motion.div>
-        </form>
+        </div>
       </div>
     </div>
   );
