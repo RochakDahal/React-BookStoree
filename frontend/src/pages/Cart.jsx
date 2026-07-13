@@ -1,134 +1,168 @@
+// src/pages/Cart.jsx
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { 
+  ShoppingCart, 
+  Trash2, 
+  Plus, 
+  Minus, 
+  ArrowLeft,
+  CreditCard
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 
 const Cart = () => {
-  const { cartItems, loading, updateQuantity, removeFromCart, getCartTotal } = useCart();
+  const { 
+    cartItems, 
+    removeFromCart, 
+    updateQuantity, 
+    clearCart,
+    getTotal,        // ✅ Use getTotal instead of getCartTotal
+    getItemCount     // ✅ Use getItemCount
+  } = useCart();
+  
+  const { isAuthenticated } = useAuth();
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  const total = getTotal ? getTotal() : 0;
+  const itemCount = getItemCount ? getItemCount() : 0;
+  const deliveryFee = total > 1000 ? 0 : 100;
+  const grandTotal = total + deliveryFee;
 
-  const deliveryFee = getCartTotal() > 1000 ? 0 : 100;
-  const total = getCartTotal() + deliveryFee;
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Cart is Empty</h2>
+          <p className="text-gray-600 mb-4">Please login to view your cart</p>
+          <Link to="/login" className="btn-primary">
+            Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Cart is Empty</h2>
+          <p className="text-gray-600 mb-4">Browse our books and add your favorites!</p>
+          <Link to="/books" className="btn-primary">
+            Browse Books
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-teal-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-4xl font-bold text-gray-900 mb-8"
-        >
-          Shopping Cart
-        </motion.h1>
-
-        {cartItems.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20 bg-white rounded-2xl shadow-lg"
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
+          <button
+            onClick={clearCart}
+            className="text-red-500 hover:text-red-600 flex items-center gap-2"
           >
-            <ShoppingBag className="w-20 h-20 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-            <p className="text-gray-600 mb-6">Add some books to get started!</p>
-            <Link to="/books" className="btn-primary px-8 py-3 inline-flex items-center gap-2">
-              Browse Books <ArrowRight className="w-5 h-5" />
-            </Link>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-4">
-              <AnimatePresence>
-                {cartItems.map((item) => (
-                  <motion.div
-                    key={item.book._id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -100 }}
-                    className="bg-white rounded-2xl shadow-lg p-6 flex gap-6"
-                  >
-                    <img
-                      src={item.book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=200&h=300&fit=crop'}
-                      alt={item.book.title}
-                      className="w-24 h-32 object-cover rounded-lg"
-                    />
-                    
-                    <div className="flex-1">
-                      <Link to={`/books/${item.book._id}`} className="text-xl font-bold text-gray-900 hover:text-teal-600 transition-colors">
-                        {item.book.title}
-                      </Link>
-                      <p className="text-gray-600 mt-1">by {item.book.author}</p>
-                      <p className="text-teal-600 font-bold text-lg mt-2">Rs. {item.book.price.toFixed(2)}</p>
-                      
-                      <div className="flex items-center justify-between mt-4">
-                        <div className="flex items-center border border-gray-300 rounded-lg">
-                          <button
-                            onClick={() => updateQuantity(item.book._id, item.quantity - 1)}
-                            className="p-2 hover:bg-gray-100 transition-colors"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <span className="px-4 font-semibold">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.book._id, item.quantity + 1)}
-                            className="p-2 hover:bg-gray-100 transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </div>
-                        
-                        <button
-                          onClick={() => removeFromCart(item.book._id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
+            <Trash2 className="w-4 h-4" />
+            Clear Cart
+          </button>
+        </div>
 
-            {/* Order Summary */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-2xl shadow-lg p-6 h-fit sticky top-24"
-            >
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Cart Items */}
+          <div className="lg:col-span-2">
+            <AnimatePresence>
+              {cartItems.map((item, index) => (
+                <motion.div
+                  key={item.bookId?._id || index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="bg-white rounded-xl shadow-md p-4 mb-4 flex flex-col sm:flex-row items-center gap-4"
+                >
+                  {/* Book Cover */}
+                  <img
+                    src={item.bookId?.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&h=150&fit=crop'}
+                    alt={item.bookId?.title}
+                    className="w-20 h-28 object-cover rounded-lg"
+                  />
+
+                  {/* Book Info */}
+                  <div className="flex-1 text-center sm:text-left">
+                    <h3 className="font-semibold text-gray-900">{item.bookId?.title}</h3>
+                    <p className="text-sm text-gray-600">by {item.bookId?.author}</p>
+                    <p className="text-lg font-bold text-teal-600">
+                      Rs. {((item.bookId?.price || 0) * item.quantity).toFixed(2)}
+                    </p>
+                  </div>
+
+                  {/* Quantity Controls */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => updateQuantity(item.bookId?._id, Math.max(1, item.quantity - 1))}
+                      className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(item.bookId?._id, item.quantity + 1)}
+                      className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Remove Button */}
+                  <button
+                    onClick={() => removeFromCart(item.bookId?._id)}
+                    className="text-red-500 hover:text-red-600 p-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
               
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3">
                 <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>Rs. {getCartTotal().toFixed(2)}</span>
+                  <span>Subtotal ({itemCount} items)</span>
+                  <span>Rs. {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Fee</span>
-                  <span>{deliveryFee === 0 ? 'FREE' : `Rs. ${deliveryFee.toFixed(2)}`}</span>
+                  <span>{deliveryFee === 0 ? 'Free' : `Rs. ${deliveryFee.toFixed(2)}`}</span>
                 </div>
-                <hr />
-                <div className="flex justify-between text-xl font-bold text-gray-900">
+                {deliveryFee === 0 && total > 0 && (
+                  <p className="text-xs text-green-600">Free delivery on orders over Rs. 1,000</p>
+                )}
+                <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold text-gray-900">
                   <span>Total</span>
-                  <span>Rs. {total.toFixed(2)}</span>
+                  <span className="text-teal-600">Rs. {grandTotal.toFixed(2)}</span>
                 </div>
               </div>
 
-              <Link to="/checkout" className="btn-primary w-full py-4 text-lg font-semibold flex items-center justify-center gap-2">
-                Proceed to Checkout <ArrowRight className="w-5 h-5" />
+              <Link
+                to="/checkout"
+                className="w-full mt-6 py-3 bg-linear-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                Proceed to Checkout
               </Link>
-              
-              {getCartTotal() < 1000 && (
-                <p className="text-center text-sm text-gray-600 mt-4">
-                  Add Rs. {(1000 - getCartTotal()).toFixed(2)} more for free delivery!
-                </p>
-              )}
-            </motion.div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -1,79 +1,74 @@
+// src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { BookProvider } from './context/BookContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
-import About from './pages/About';
-import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Wishlist from './pages/Wishlist';
-import ProtectedRoute from './components/ProtectedRoute';
-import ScrollToTop, { ScrollToTopButton } from './components/ScrollToTop';
-import './index.css';
 import Checkout from './pages/Checkout';
-import OrderSuccess from './pages/OrderSuccess';
-import OrderDetails from './pages/OrderDetails';
 import Profile from './pages/Profile';
 import MyOrders from './pages/MyOrders';
-import PaymentEsewa from './pages/PaymentEsewa';
-import EsewaSuccess from './pages/EsewaSuccess';
-import CheckoutStripe from './pages/CheckoutStripe';
-import PaymentLoader from './components/PaymentLoader';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ProtectedRoute from './components/ProtectedRoute';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentFailure from './pages/PaymentFailure';
 
 function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <Router>
-            {/* Scroll to top on route change */}
-            <ScrollToTop />
-            
-            <div className="min-h-screen flex flex-col">
-              {/* Navbar is now INSIDE CartProvider and WishlistProvider */}
-              <Navbar />
-              
-              <main className="grow">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/books" element={<Books />} />
-                  <Route path="/books/:id" element={<BookDetails />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
-                  
-                  
-                  {/* Protected Routes */}
-                  <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
-                  <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
-                  <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-                  <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
-                  <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
-                  <Route path="/orders/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/payment/esewa" element={<ProtectedRoute><PaymentEsewa /></ProtectedRoute>} />
-                  <Route path="/payment/esewa/success" element={<ProtectedRoute><EsewaSuccess /></ProtectedRoute>} />
-                  <Route path="/payment/esewa/failure" element={<ProtectedRoute><PaymentLoader method="eSewa" status="failed" /></ProtectedRoute>} />
-                  <Route path="/payment/stripe" element={<ProtectedRoute><CheckoutStripe /></ProtectedRoute>} />
-                </Routes>
-                
-                {/* Floating scroll to top button */}
-                <ScrollToTopButton />
-              </main>
-              
-              <Footer />
-            </div>
-          </Router>
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <BookProvider>
+              <div className="min-h-screen flex flex-col">
+                <Navbar />
+                <main className="grow pt-16">
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/books" element={<Books />} />
+                    <Route path="/books/:id" element={<BookDetails />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    
+                    {/* Payment Routes - Public (for redirects) */}
+                    <Route path="/payment-success" element={<PaymentSuccess />} />
+                    <Route path="/payment-failure" element={<PaymentFailure />} />
+                    
+                    {/* Protected Routes */}
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/my-orders" element={
+                      <ProtectedRoute>
+                        <MyOrders />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/checkout" element={
+                      <ProtectedRoute>
+                        <Checkout />
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+            </BookProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

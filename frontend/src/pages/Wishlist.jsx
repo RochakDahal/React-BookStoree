@@ -1,105 +1,140 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
+// src/pages/Wishlist.jsx
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, BookOpen, ArrowRight } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
-import { useCart } from '../context/CartContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
+import BookCard from '../components/BookCard';
 
 const Wishlist = () => {
-  const { wishlistItems, loading, removeFromWishlist } = useWishlist();
-  const { addToCart } = useCart();
+  // ✅ Destructure with default empty array
+  const { wishlist = [], loading, fetchWishlist } = useWishlist();
+  const { isAuthenticated } = useAuth();
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchWishlist();
+    }
+  }, [isAuthenticated]);
 
-  const handleMoveToCart = (book) => {
-    addToCart(book._id, 1);
-    removeFromWishlist(book._id);
-  };
+  // ✅ Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your wishlist...</p>
+        </div>
+      </div>
+    );
+  }
 
+  // ✅ Not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center"
+        >
+          <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Login to View Wishlist</h2>
+          <p className="text-gray-600 mb-6">Please login to see your saved books</p>
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:shadow-lg transition-all"
+          >
+            Login Now
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ✅ Empty wishlist - FIXED: This is safe because wishlist is always an array
+  if (wishlist.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-24 h-24 bg-linear-to-r from-pink-100 to-red-100 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <Heart className="w-12 h-12 text-red-400" />
+          </motion.div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Wishlist is Empty</h2>
+          <p className="text-gray-600 mb-6">
+            Start adding your favorite books to your wishlist!
+          </p>
+          <Link
+            to="/books"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:shadow-lg transition-all"
+          >
+            <BookOpen className="w-4 h-4" />
+            Browse Books
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ✅ Wishlist with books
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-teal-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h1
+        {/* Header */}
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl font-bold text-gray-900 mb-8 flex items-center gap-3"
+          className="flex items-center justify-between mb-8"
         >
-          <Heart className="w-10 h-10 text-red-500 fill-red-500" />
-          My Wishlist
-        </motion.h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Heart className="w-8 h-8 text-red-500 fill-red-500" />
+              My Wishlist
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {wishlist.length} {wishlist.length === 1 ? 'book' : 'books'} saved
+            </p>
+          </div>
+          <Link
+            to="/books"
+            className="text-teal-500 hover:text-teal-600 font-medium flex items-center gap-1"
+          >
+            Browse More Books
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
 
-        {wishlistItems.length === 0 ? (
+        {/* Books Grid */}
+        <AnimatePresence>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20 bg-white rounded-2xl shadow-lg"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
           >
-            <Heart className="w-20 h-20 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your wishlist is empty</h2>
-            <p className="text-gray-600 mb-6">Save books you love for later!</p>
-            <Link to="/books" className="btn-primary px-8 py-3 inline-flex items-center gap-2">
-              Browse Books
-            </Link>
+            {wishlist.map((book, index) => (
+              <motion.div
+                key={book._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+              >
+                <BookCard book={book} index={index} />
+              </motion.div>
+            ))}
           </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          >
-            <AnimatePresence>
-              {wishlistItems.map((book) => (
-                <motion.div
-                  key={book._id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300"
-                >
-                  <Link to={`/books/${book._id}`}>
-                    <div className="relative h-64 overflow-hidden bg-gray-100">
-                      <img
-                        src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&h=600&fit=crop'}
-                        alt={book.title}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                  </Link>
-
-                  <div className="p-5">
-                    <Link to={`/books/${book._id}`}>
-                      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1 hover:text-teal-600 transition-colors">
-                        {book.title}
-                      </h3>
-                    </Link>
-                    <p className="text-gray-600 text-sm mb-3">by {book.author}</p>
-                    <p className="text-2xl font-bold text-gray-900 mb-4">Rs. {book.price.toFixed(2)}</p>
-
-                    <div className="flex gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleMoveToCart(book)}
-                        className="flex-1 bg-linear-to-r from-teal-500 to-cyan-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 hover:from-teal-600 hover:to-cyan-600 transition-all"
-                      >
-                        <ShoppingCart className="w-4 h-4" /> Add to Cart
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => removeFromWishlist(book._id)}
-                        className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </motion.button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
+        </AnimatePresence>
       </div>
     </div>
   );
