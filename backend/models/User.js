@@ -17,22 +17,19 @@ const userSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
-    required: [true, 'Gender is required'],
-    enum: ['Male', 'Female', 'Other', 'Prefer Not to Say']
+    enum: ['male', 'female', 'other', 'prefer not to say'],
+    default: 'prefer not to say'
   },
   address: {
     type: String,
-    required: [true, 'Address is required'],
-    trim: true
+    default: ''
   },
   city: {
     type: String,
-    trim: true,
     default: ''
   },
   phone: {
     type: String,
-    trim: true,
     default: ''
   },
   email: {
@@ -52,15 +49,13 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['user', 'admin'],
-    default: 'user'
-  },
-  avatar: {
-    type: String,
-    default: ''
+    default: 'user'  // ✅ Default is 'user', but can be overridden
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
-// ✅ Hash password before saving
+// Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
@@ -73,24 +68,14 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// ✅ Compare password method
+// Compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// ✅ Virtual field for full name
+// Virtual field
 userSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
-});
-
-// ✅ Ensure virtuals are included in JSON
-userSchema.set('toJSON', {
-  virtuals: true,
-  transform: function(doc, ret) {
-    delete ret.password;
-    delete ret.__v;
-    return ret;
-  }
 });
 
 module.exports = mongoose.model('User', userSchema);
