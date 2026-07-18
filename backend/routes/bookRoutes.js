@@ -1,8 +1,9 @@
-const { protect, authorize } = require('../middleware/auth');
-
+// backend/routes/bookRoutes.js
 const express = require('express');
 const router = express.Router();
 const Book = require('../models/Book');
+const { protect, authorize } = require('../middleware/auth');
+const { addReview, updateReview, deleteReview } = require('../controllers/reviewController');
 
 // @route   GET /api/books
 // @desc    Get all books
@@ -61,6 +62,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 // @route   POST /api/books
 // @desc    Create new book (Admin only)
 // @access  Private/Admin
@@ -76,6 +78,7 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 // @route   PUT /api/books/:id
 // @desc    Update book (Admin only)
 // @access  Private/Admin
@@ -100,6 +103,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 // @route   DELETE /api/books/:id
 // @desc    Delete book (Admin only)
 // @access  Private/Admin
@@ -119,5 +123,24 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ============================================
+// ✅ REVIEW ROUTES
+// ============================================
+
+// @route   POST /api/books/:id/reviews
+// @desc    Add a review to a book
+// @access  Private
+router.post('/:id/reviews', protect, addReview);
+
+// @route   PUT /api/books/:id/reviews
+// @desc    Update a review
+// @access  Private
+router.put('/:id/reviews', protect, updateReview);
+
+// @route   DELETE /api/books/:id/reviews
+// @desc    Delete a review
+// @access  Private
+router.delete('/:id/reviews', protect, deleteReview);
 
 module.exports = router;
