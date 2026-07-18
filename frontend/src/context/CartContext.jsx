@@ -145,9 +145,11 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // ✅ Calculate total with discounted prices
   const getTotal = () => {
     return cartItems.reduce((total, item) => {
-      return total + (item.bookId?.price || 0) * item.quantity;
+      const price = item.price || item.bookId?.price || 0;
+      return total + (price * item.quantity);
     }, 0);
   };
 

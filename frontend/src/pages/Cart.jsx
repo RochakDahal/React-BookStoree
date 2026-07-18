@@ -18,8 +18,8 @@ const Cart = () => {
     removeFromCart, 
     updateQuantity, 
     clearCart,
-    getTotal,        // ✅ Use getTotal instead of getCartTotal
-    getItemCount     // ✅ Use getItemCount
+    getTotal,
+    getItemCount
   } = useCart();
   
   const { isAuthenticated } = useAuth();
@@ -28,6 +28,17 @@ const Cart = () => {
   const itemCount = getItemCount ? getItemCount() : 0;
   const deliveryFee = total > 1000 ? 0 : 100;
   const grandTotal = total + deliveryFee;
+
+  const handleRemoveItem = async (bookId) => {
+    if (window.confirm('Are you sure you want to remove this item?')) {
+      await removeFromCart(bookId);
+    }
+  };
+
+  const handleUpdateQuantity = async (bookId, newQuantity) => {
+    if (newQuantity < 1) return;
+    await updateQuantity(bookId, newQuantity);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -87,31 +98,36 @@ const Cart = () => {
                 >
                   {/* Book Cover */}
                   <img
-                    src={item.bookId?.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&h=150&fit=crop'}
-                    alt={item.bookId?.title}
+                    src={item.bookId?.coverImage || item.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&h=150&fit=crop'}
+                    alt={item.bookId?.title || item.title}
                     className="w-20 h-28 object-cover rounded-lg"
                   />
 
                   {/* Book Info */}
                   <div className="flex-1 text-center sm:text-left">
-                    <h3 className="font-semibold text-gray-900">{item.bookId?.title}</h3>
+                    <h3 className="font-semibold text-gray-900">{item.bookId?.title || item.title}</h3>
                     <p className="text-sm text-gray-600">by {item.bookId?.author}</p>
                     <p className="text-lg font-bold text-teal-600">
-                      Rs. {((item.bookId?.price || 0) * item.quantity).toFixed(2)}
+                      Rs. {((item.price || item.bookId?.price || 0) * item.quantity).toFixed(2)}
                     </p>
+                    {item.discount > 0 && (
+                      <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                        {item.discount}% OFF
+                      </span>
+                    )}
                   </div>
 
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => updateQuantity(item.bookId?._id, Math.max(1, item.quantity - 1))}
+                      onClick={() => handleUpdateQuantity(item.bookId?._id, Math.max(1, item.quantity - 1))}
                       className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
                     <span className="w-8 text-center font-medium">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.bookId?._id, item.quantity + 1)}
+                      onClick={() => handleUpdateQuantity(item.bookId?._id, item.quantity + 1)}
                       className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
@@ -120,7 +136,7 @@ const Cart = () => {
 
                   {/* Remove Button */}
                   <button
-                    onClick={() => removeFromCart(item.bookId?._id)}
+                    onClick={() => handleRemoveItem(item.bookId?._id)}
                     className="text-red-500 hover:text-red-600 p-2"
                   >
                     <Trash2 className="w-5 h-5" />

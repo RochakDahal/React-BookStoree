@@ -53,11 +53,15 @@ const Navbar = () => {
     { to: '/wishlist', icon: Heart, label: 'Wishlist' },
   ];
 
-  // ✅ Admin dropdown items
+  // ✅ Dropdown items - Hide "My Orders" for admin
   const dropdownItems = [
     { to: '/profile', icon: UserCircle, label: 'My Profile' },
-    { to: '/my-orders', icon: Package, label: 'My Orders' },
   ];
+
+  // ✅ Only show "My Orders" for regular users (not admin)
+  if (user?.role !== 'admin') {
+    dropdownItems.push({ to: '/my-orders', icon: Package, label: 'My Orders' });
+  }
 
   // ✅ Add admin dashboard link if user is admin
   if (user?.role === 'admin') {
@@ -231,14 +235,16 @@ const Navbar = () => {
                     <UserCircle className="w-5 h-5" />
                     My Profile
                   </Link>
-                  <Link
-                    to="/my-orders"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-teal-50 transition-all"
-                  >
-                    <Package className="w-5 h-5" />
-                    My Orders
-                  </Link>
+                  {user?.role !== 'admin' && (
+                    <Link
+                      to="/my-orders"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-teal-50 transition-all"
+                    >
+                      <Package className="w-5 h-5" />
+                      My Orders
+                    </Link>
+                  )}
                   {user?.role === 'admin' && (
                     <Link
                       to="/admin"

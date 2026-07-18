@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, MapPin, Phone, Edit2, Save } from 'lucide-react';
+import { User, Mail, MapPin, Phone, Edit2, Save, Shield } from 'lucide-react';
 
 const Profile = () => {
   const { user, token } = useAuth();
@@ -14,6 +14,7 @@ const Profile = () => {
     email: '',
     phone: '',
     address: '',
+    city: '',
     gender: ''
   });
 
@@ -25,6 +26,7 @@ const Profile = () => {
         email: user.email || '',
         phone: user.phone || '',
         address: user.address || '',
+        city: user.city || '',
         gender: user.gender || ''
       });
     }
@@ -70,6 +72,16 @@ const Profile = () => {
     );
   }
 
+  // ✅ Get role display name
+  const getRoleDisplay = () => {
+    if (user.role === 'admin') {
+      return { label: 'Admin', color: 'bg-purple-100 text-purple-700' };
+    }
+    return { label: 'User', color: 'bg-gray-100 text-gray-700' };
+  };
+
+  const role = getRoleDisplay();
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4">
@@ -90,6 +102,11 @@ const Profile = () => {
                     {user.firstName} {user.lastName}
                   </h1>
                   <p className="text-white/80">{user.email}</p>
+                  {/* ✅ Show Role Badge */}
+                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium ${role.color}`}>
+                    <Shield className="w-3 h-3 inline mr-1" />
+                    {role.label}
+                  </span>
                 </div>
               </div>
               <button
@@ -189,11 +206,28 @@ const Profile = () => {
                     }`}
                   >
                     <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                    <option value="Prefer Not to Say">Prefer Not to Say</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer not to say">Prefer Not to Say</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                      isEditing ? 'border-gray-300' : 'border-gray-100 bg-gray-50'
+                    }`}
+                    placeholder="Kathmandu"
+                  />
                 </div>
 
                 <div className="md:col-span-2">

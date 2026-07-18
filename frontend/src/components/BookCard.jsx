@@ -17,12 +17,15 @@ const BookCard = ({ book, index }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   
-  // ✅ Safe check - book might be undefined
   if (!book) return null;
   
   const inWishlist = isInWishlist(book._id);
+  
+  // ✅ Calculate discount - FIXED
+  const hasDiscount = book.discount && book.discount > 0;
+  const discountedPrice = hasDiscount ? book.price - (book.price * book.discount / 100) : book.price;
+  const savings = hasDiscount ? book.price - discountedPrice : 0;
 
-  // ✅ Handle Add to Cart
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -42,6 +45,7 @@ const BookCard = ({ book, index }) => {
     setAddingToCart(true);
 
     try {
+      // ✅ Send discounted price to cart
       const result = await addToCart(book._id, 1);
       
       if (result && result.success) {
@@ -58,7 +62,6 @@ const BookCard = ({ book, index }) => {
     }
   };
 
-  // ✅ Handle Wishlist
   const handleWishlistClick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -80,7 +83,6 @@ const BookCard = ({ book, index }) => {
     }
   };
 
-  // ✅ Render stars
   const renderStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating || 0);
@@ -109,7 +111,6 @@ const BookCard = ({ book, index }) => {
         onMouseLeave={() => setIsHovered(false)}
         className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 h-full flex flex-col relative"
       >
-        {/* Success Toast */}
         {showSuccess && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -131,10 +132,20 @@ const BookCard = ({ book, index }) => {
             transition={{ duration: 0.3 }}
           />
           
+          {/* ✅ Discount Badge */}
+          {hasDiscount && (
+            <div className="absolute top-3 left-3 z-10">
+              <div className="bg-linear-to-r from-red-600 to-red-500 text-white px-3 py-2 rounded-lg shadow-lg text-center min-w-15">
+                <div className="text-lg font-bold leading-none">{book.discount}%</div>
+                <div className="text-[8px] uppercase tracking-wider opacity-90">OFF</div>
+              </div>
+            </div>
+          )}
+
           {/* Wishlist Button */}
           <button
             onClick={handleWishlistClick}
-            className={`absolute top-3 left-3 p-2 rounded-full shadow-lg transition-all z-10 ${
+            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg transition-all z-10 ${
               inWishlist 
                 ? 'bg-red-500 text-white' 
                 : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-red-500 hover:text-white'
@@ -144,7 +155,7 @@ const BookCard = ({ book, index }) => {
           </button>
 
           {/* Rating Badge */}
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+          <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
             <div className="flex">{renderStars(book.rating || 0)}</div>
             <span className="text-xs font-semibold text-gray-700 ml-0.5">
               {book.rating ? book.rating.toFixed(1) : 'N/A'}
@@ -169,13 +180,30 @@ const BookCard = ({ book, index }) => {
           
           <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
             <div>
-              <span className="text-xl font-bold text-gray-900">Rs. {book.price.toFixed(2)}</span>
+              {hasDiscount ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-teal-600">
+                      Rs. {discountedPrice.toFixed(2)}
+                    </span>
+                    <span className="text-sm text-gray-400 line-through">
+                      Rs. {book.price.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                      Save Rs. {savings.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xl font-bold text-gray-900">Rs. {book.price.toFixed(2)}</span>
+              )}
               {book.stock > 0 && book.stock < 10 && (
-                <p className="text-xs text-orange-600">Only {book.stock} left!</p>
+                <p className="text-xs text-orange-600 mt-0.5">Only {book.stock} left!</p>
               )}
             </div>
             
-            {/* Add to Cart Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

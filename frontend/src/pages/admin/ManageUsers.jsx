@@ -1,12 +1,14 @@
 // src/pages/admin/ManageUsers.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Shield } from 'lucide-react';
+import { User, Mail, Shield, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updating, setUpdating] = useState(false);
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -15,12 +17,16 @@ const ManageUsers = () => {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const res = await axios.get('http://localhost:5000/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('📋 Users fetched:', res.data);
       setUsers(res.data.users || []);
+      setError('');
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('❌ Error fetching users:', error);
+      setError(error.response?.data?.message || 'Failed to fetch users. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -28,16 +34,34 @@ const ManageUsers = () => {
 
   const toggleUserRole = async (userId, currentRole) => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    
+    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
+      return;
+    }
+
     try {
-      await axios.put(
+      setUpdating(true);
+      
+      const response = await axios.put(
         `http://localhost:5000/api/admin/users/${userId}/role`,
         { role: newRole },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
-      fetchUsers();
+
+      console.log('✅ Role updated:', response.data);
+      
+      await fetchUsers();
+      alert(`✅ User role successfully updated to ${newRole}`);
     } catch (error) {
-      console.error('Error updating user role:', error);
-      alert('Failed to update user role');
+      console.error('❌ Error updating user role:', error);
+      alert(error.response?.data?.message || 'Failed to update user role. Please try again.');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -49,9 +73,33 @@ const ManageUsers = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500">{error}</p>
+        <button 
+          onClick={fetchUsers}
+          className="mt-4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Manage Users</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Manage Users</h1>
+        <button 
+          onClick={fetchUsers}
+          disabled={updating}
+          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -120,11 +168,12 @@ const ManageUsers = () => {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => toggleUserRole(user._id, user.role)}
+                        disabled={updating}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                           user.role === 'admin'
                             ? 'bg-red-100 text-red-700 hover:bg-red-200'
                             : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
-                        }`}
+                        } disabled:opacity-50`}
                       >
                         {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
                       </button>
