@@ -18,24 +18,51 @@ const generateToken = (id) => {
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, gender, address, city, phone, email, password } = req.body;
+    console.log('📝 Register request body:', req.body);
 
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+    const { firstName, lastName, gender, address, city, phone, email, password, role } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields: firstName, lastName, email, password'
+      });
     }
 
-    // Create user with all fields
+    // Check if user exists
+    const userExists = await User.findOne({ email: email.toLowerCase() });
+    if (userExists) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User already exists with this email' 
+      });
+    }
+
+    // Normalize gender
+    const genderMap = {
+      'male': 'male',
+      'female': 'female',
+      'other': 'other',
+      'prefer not to say': 'prefer not to say',
+      'Male': 'male',
+      'Female': 'female',
+      'Other': 'other',
+      'Prefer Not to Say': 'prefer not to say'
+    };
+    const normalizedGender = genderMap[gender] || 'prefer not to say';
+
+    // ✅ Create user with role support
     const user = await User.create({
-      firstName,
-      lastName,
-      gender,
-      address,
-      city,
-      phone,
-      email,
-      password
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      gender: normalizedGender,
+      address: address || '',
+      city: city || '',
+      phone: phone || '',
+      email: email.toLowerCase().trim(),
+      password: password,
+      role: role || 'user'  // ✅ Accept role from request or default to 'user'
     });
 
     // Generate token
@@ -54,12 +81,15 @@ router.post('/register', async (req, res) => {
         address: user.address,
         city: user.city,
         phone: user.phone,
-        role: user.role
+        role: user.role  // ✅ Returns the actual role
       }
     });
   } catch (error) {
     console.error('❌ Registration Error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 });
 
@@ -68,19 +98,35 @@ router.post('/register', async (req, res) => {
 // @access  Public
 router.post('/login', async (req, res) => {
   try {
+    console.log('📝 Login request body:', req.body);
+
     const { email, password } = req.body;
 
-    // Find user and explicitly select the hidden password field
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password'
+      });
+    }
+
+    const user = await User.findOne({ 
+      email: email.toLowerCase() 
+    }).select('+password');
     
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
 
     const isMatch = await user.comparePassword(password);
     
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
 
     const token = generateToken(user._id);
@@ -103,7 +149,10 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Login Error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 });
 
@@ -112,58 +161,8 @@ router.post('/login', async (req, res) => {
 // @access  Private
 router.get('/me', protect, async (req, res) => {
   try {
-    // req.user.id is injected by the 'protect' middleware
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
     
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.status(200).json({
-      success: true,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        gender: user.gender,
-        address: user.address,
-        city: user.city,
-        phone: user.phone,
-        role: user.role,
-        createdAt: user.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('❌ Get Me Error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ✅ @desc    Update user profile
-// @route   PUT /api/auth/update-profile
-// @access  Private
-router.put('/update-profile', protect, async (req, res) => {
-  try {
-    const { firstName, lastName, phone, address, city, gender } = req.body;
-    
-    // Find user and update
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { 
-        firstName, 
-        lastName, 
-        phone, 
-        address, 
-        city, 
-        gender 
-      },
-      { 
-        new: true, 
-        runValidators: true 
-      }
-    ).select('-password');
-
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -173,7 +172,6 @@ router.put('/update-profile', protect, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Profile updated successfully',
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -187,7 +185,7 @@ router.put('/update-profile', protect, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Update Profile Error:', error);
+    console.error('❌ Get Me Error:', error);
     res.status(500).json({ 
       success: false, 
       message: error.message 
@@ -195,49 +193,74 @@ router.put('/update-profile', protect, async (req, res) => {
   }
 });
 
-// ✅ @desc    Change password
-// @route   PUT /api/auth/change-password
-// @access  Private
-router.put('/change-password', protect, async (req, res) => {
+// ✅ @desc    Register admin user
+// @route   POST /api/auth/register-admin
+// @access  Public (or Protected)
+router.post('/register-admin', async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-    
-    if (!currentPassword || !newPassword) {
+    console.log('📝 Admin Register request:', req.body);
+
+    const { firstName, lastName, gender, address, city, phone, email, password } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide current and new password'
+        message: 'Please provide all required fields'
       });
     }
 
-    // Get user with password
-    const user = await User.findById(req.user.id).select('+password');
-    
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
-      });
-    }
-
-    // Verify current password
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) {
-      return res.status(401).json({
+    // Check if admin already exists
+    const adminExists = await User.findOne({ role: 'admin' });
+    if (adminExists) {
+      return res.status(400).json({
         success: false,
-        message: 'Current password is incorrect'
+        message: 'Admin already exists. Only one admin is allowed.'
       });
     }
 
-    // Update password (will be hashed by pre-save hook)
-    user.password = newPassword;
-    await user.save();
+    // Check if user exists
+    const userExists = await User.findOne({ email: email.toLowerCase() });
+    if (userExists) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User already exists with this email' 
+      });
+    }
 
-    res.status(200).json({
+    // ✅ Force role to be 'admin'
+    const user = await User.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      gender: gender || 'prefer not to say',
+      address: address || '',
+      city: city || '',
+      phone: phone || '',
+      email: email.toLowerCase().trim(),
+      password: password,
+      role: 'admin'  // ✅ Force admin role
+    });
+
+    const token = generateToken(user._id);
+
+    res.status(201).json({
       success: true,
-      message: 'Password changed successfully'
+      message: 'Admin registered successfully',
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        address: user.address,
+        city: user.city,
+        phone: user.phone,
+        role: user.role
+      }
     });
   } catch (error) {
-    console.error('❌ Change Password Error:', error);
+    console.error('❌ Admin Registration Error:', error);
     res.status(500).json({ 
       success: false, 
       message: error.message 
