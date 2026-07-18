@@ -4,10 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, ShoppingCart, User, LogOut, BookOpen, Heart, 
-  Home, ChevronDown, UserCircle, Package
+  Home, ChevronDown, UserCircle, Package, LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import GlobalSearch from './GlobalSearch';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,10 +53,20 @@ const Navbar = () => {
     { to: '/wishlist', icon: Heart, label: 'Wishlist' },
   ];
 
+  // ✅ Admin dropdown items
   const dropdownItems = [
     { to: '/profile', icon: UserCircle, label: 'My Profile' },
     { to: '/my-orders', icon: Package, label: 'My Orders' },
   ];
+
+  // ✅ Add admin dashboard link if user is admin
+  if (user?.role === 'admin') {
+    dropdownItems.push({ 
+      to: '/admin', 
+      icon: LayoutDashboard, 
+      label: 'Admin Dashboard' 
+    });
+  }
 
   return (
     <motion.nav
@@ -71,7 +82,7 @@ const Navbar = () => {
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
-              className="w-8 h-8 bg-linear-to-rrom-teal-500 to-cyan-500 rounded-lg flex items-center justify-center"
+              className="w-8 h-8 bg-linear-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center"
             >
               <BookOpen className="w-5 h-5 text-white" />
             </motion.div>
@@ -81,6 +92,7 @@ const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center space-x-1">
+            <GlobalSearch />
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -227,6 +239,16 @@ const Navbar = () => {
                     <Package className="w-5 h-5" />
                     My Orders
                   </Link>
+                  {user?.role === 'admin' && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-purple-600 hover:bg-purple-50 transition-all"
+                    >
+                      <LayoutDashboard className="w-5 h-5" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-all"

@@ -20,6 +20,13 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
 
+// ✅ Admin Imports
+import AdminLayout from './components/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageBooks from './pages/admin/ManageBooks';
+import ManageOrders from './pages/admin/ManageOrders';
+import ManageUsers from './pages/admin/ManageUsers';
+
 function App() {
   return (
     <Router>
@@ -31,7 +38,7 @@ function App() {
                 <Navbar />
                 <main className="grow pt-16">
                   <Routes>
-                    {/* Public Routes */}
+                    {/* ========== PUBLIC ROUTES ========== */}
                     <Route path="/" element={<Home />} />
                     <Route path="/books" element={<Books />} />
                     <Route path="/books/:id" element={<BookDetails />} />
@@ -40,11 +47,11 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     
-                    {/* Payment Routes - Public (for redirects) */}
+                    {/* ========== PAYMENT ROUTES ========== */}
                     <Route path="/payment-success" element={<PaymentSuccess />} />
                     <Route path="/payment-failure" element={<PaymentFailure />} />
                     
-                    {/* Protected Routes */}
+                    {/* ========== PROTECTED USER ROUTES ========== */}
                     <Route path="/profile" element={
                       <ProtectedRoute>
                         <Profile />
@@ -60,6 +67,18 @@ function App() {
                         <Checkout />
                       </ProtectedRoute>
                     } />
+
+                    {/* ========== ADMIN ROUTES ========== */}
+                    <Route path="/admin" element={
+                      <ProtectedRoute>
+                        <AdminLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="books" element={<ManageBooks />} />
+                      <Route path="orders" element={<ManageOrders />} />
+                      <Route path="users" element={<ManageUsers />} />
+                    </Route>
                   </Routes>
                 </main>
                 <Footer />
