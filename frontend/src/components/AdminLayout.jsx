@@ -1,53 +1,71 @@
-import { Link, useLocation, Outlet } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, ShoppingCart, Users, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+// src/components/AdminLayout.jsx
+import { useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  BookOpen, 
+  ShoppingBag, 
+  Users, 
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 
 const AdminLayout = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { user } = useAuth();
 
-  const navItems = [
+  const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/books', icon: BookOpen, label: 'Manage Books' },
-    { path: '/admin/orders', icon: ShoppingCart, label: 'Manage Orders' },
-    { path: '/admin/users', icon: Users, label: 'Users' },
+    { path: '/admin/orders', icon: ShoppingBag, label: 'Manage Orders' },
+    { path: '/admin/users', icon: Users, label: 'Manage Users' },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="flex min-h-[calc(100vh-4rem)] bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-bold text-teal-600">Admin Panel</h2>
-          <p className="text-sm text-gray-500 mt-1">Welcome, {user?.firstName}</p>
+      <aside 
+        className={`bg-white border-r border-gray-200 transition-all duration-300 ${
+          collapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        <div className="flex justify-end p-4">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
-        <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+
+        <nav className="px-3 space-y-2">
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path || 
+              (item.path !== '/admin' && location.pathname.startsWith(item.path));
+            
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-teal-50 text-teal-600'
+                    : 'text-gray-700 hover:bg-gray-100'
+                } ${collapsed ? 'justify-center' : ''}`}
               >
-                <item.icon className="w-5 h-5" />
-                {item.label}
+                <item.icon className="w-5 h-5 shrink-0" />
+                {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
               </Link>
             );
           })}
         </nav>
-        <div className="p-4 border-t">
-          <Link to="/" className="flex items-center gap-2 text-gray-600 hover:text-teal-600">
-            <ArrowLeft className="w-4 h-4" /> Back to Store
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <Outlet />
+      <main className="flex-1 p-6 overflow-auto">
+        <div className="max-w-7xl mx-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

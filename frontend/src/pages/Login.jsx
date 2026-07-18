@@ -1,167 +1,149 @@
+// src/pages/Login.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, BookOpen, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
 
-  const validate = () => {
-    const newErrors = {};
-    if (!formData.email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email';
-    if (!formData.password) newErrors.password = 'Password is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      setLoading(true);
-      try {
-        await login(formData.email, formData.password);
-        navigate('/');
-      } catch (error) {
-        setErrors({ submit: error.response?.data?.message || 'Login failed. Please try again.' });
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setError('');
+
+    if (!formData.email || !formData.password) {
+      setError('Email and password are required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        // ✅ Redirect admin to admin dashboard
+        if (result.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      } else {
+        setError(result.message || 'Login failed');
       }
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      setError('Network error: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Branding & Illustration */}
-      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-teal-600 via-cyan-600 to-blue-700 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        {/* Decorative Circles */}
-        <div className="absolute -top-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl"></div>
-        
-        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                <BookOpen className="w-7 h-7" />
-              </div>
-              <h1 className="text-3xl font-bold tracking-wide">BOOKSHELL</h1>
-            </div>
-            <h2 className="text-5xl font-bold leading-tight mb-6">
-              Welcome Back to Your <br/> Literary Journey.
-            </h2>
-            <p className="text-lg text-teal-50 leading-relaxed max-w-md">
-              Dive back into your curated collections, track your orders, and discover your next favorite read.
-            </p>
-          </motion.div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8"
+      >
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+          <p className="text-gray-600 mt-2">Login to your BookShell account</p>
         </div>
-      </div>
 
-      {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <BookOpen className="w-8 h-8 text-teal-600" />
-            <span className="text-2xl font-bold text-gray-800">BOOKSHELL</span>
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="john@example.com"
+                disabled={loading}
+              />
+            </div>
           </div>
 
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h2>
-          <p className="text-gray-500 mb-8">Enter your credentials to access your account</p>
-
-          {errors.submit && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6 text-sm"
-            >
-              {errors.submit}
-            </motion.div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={`w-full pl-12 pr-4 py-3 bg-white border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all`}
-                  placeholder="name@example.com"
-                />
-              </div>
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Enter your password"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full pl-12 pr-12 py-3 bg-white border ${errors.password ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all`}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-            </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-linear-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                Logging in...
+              </span>
+            ) : (
+              'Login'
+            )}
+          </button>
+        </form>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500" />
-                <span className="text-gray-600">Remember me</span>
-              </label>
-              <a href="#" className="text-teal-600 hover:text-teal-700 font-medium">Forgot password?</a>
-            </div>
+        <p className="text-center text-gray-600 mt-6">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-teal-500 hover:underline font-medium">
+            Create one here
+          </Link>
+        </p>
 
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              type="submit"
-              disabled={loading}
-              className="w-full bg-linear-to-r from-teal-600 to-cyan-600 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>Sign In <ArrowRight className="w-4 h-4" /></>
-              )}
-            </motion.button>
-          </form>
-
-          <p className="text-center mt-8 text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-teal-600 hover:text-teal-700 font-semibold">
-              Create one now
-            </Link>
-          </p>
-        </motion.div>
-      </div>
+        
+      </motion.div>
     </div>
   );
 };
