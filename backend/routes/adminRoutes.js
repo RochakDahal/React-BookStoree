@@ -7,7 +7,8 @@ const {
   updateBook, 
   deleteBook, 
   updateOrderStatus, 
-  getAllUsers 
+  getAllUsers,
+  updateUserRole
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -20,6 +21,7 @@ router.get('/stats', getDashboardStats);
 
 // Users
 router.get('/users', getAllUsers);
+router.put('/users/:id/role', updateUserRole);
 
 // Orders
 router.put('/orders/:id', updateOrderStatus);

@@ -1,114 +1,189 @@
+// backend/controllers/cartController.js
 const Cart = require('../models/Cart');
 const Book = require('../models/Book');
 
-// @desc    Get user cart
+// ✅ @desc    Get user's cart
 // @route   GET /api/cart
 // @access  Private
 exports.getCart = async (req, res) => {
   try {
-    let cart = await Cart.findOne({ user: req.user.id }).populate('items.book', 'title author price coverImage stock');
-
+    let cart = await Cart.findOne({ user: req.user.id }).populate('items.bookId');
+    
     if (!cart) {
-      cart = await Cart.create({ user: req.user.id, items: [] });
+      cart = await Cart.create({ 
+        user: req.user.id, 
+        items: [] 
+      });
     }
+
+    // Calculate total
+    let total = 0;
+    cart.items.forEach(item => {
+      const price = item.price || item.bookId?.price || 0;
+      total += price * item.quantity;
+    });
 
     res.json({
       success: true,
-      cart
+      items: cart.items,
+      total
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Get cart error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
-// @desc    Add item to cart
+// ✅ @desc    Add item to cart
 // @route   POST /api/cart
 // @access  Private
 exports.addToCart = async (req, res) => {
   try {
     const { bookId, quantity = 1 } = req.body;
-
-    // Check if book exists and has stock
+    
+    // Get book with discount
     const book = await Book.findById(bookId);
     if (!book) {
-      return res.status(404).json({ message: 'Book not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Book not found' 
+      });
     }
+
     if (book.stock < quantity) {
-      return res.status(400).json({ message: 'Not enough stock available' });
+      return res.status(400).json({ 
+        success: false,
+        message: `Only ${book.stock} items available` 
+      });
     }
+
+    // Calculate discounted price
+    const hasDiscount = book.discount && book.discount > 0;
+    const priceToUse = hasDiscount 
+      ? book.price - (book.price * book.discount / 100) 
+      : book.price;
 
     let cart = await Cart.findOne({ user: req.user.id });
-
+    
     if (!cart) {
-      cart = await Cart.create({ user: req.user.id, items: [] });
+      cart = await Cart.create({ 
+        user: req.user.id, 
+        items: [] 
+      });
     }
 
-    // Check if item already in cart
-    const existingItem = cart.items.find(item => item.book.toString() === bookId);
+    // Check if item already exists in cart
+    const existingItemIndex = cart.items.findIndex(
+      item => item.bookId.toString() === bookId
+    );
 
-    if (existingItem) {
-      existingItem.quantity += quantity;
-      if (existingItem.quantity > book.stock) {
-        return res.status(400).json({ message: 'Not enough stock available' });
-      }
+    if (existingItemIndex > -1) {
+      // Update existing item
+      cart.items[existingItemIndex].quantity += quantity;
+      cart.items[existingItemIndex].price = priceToUse;
+      cart.items[existingItemIndex].discount = book.discount || 0;
+      cart.items[existingItemIndex].title = book.title;
+      cart.items[existingItemIndex].coverImage = book.coverImage;
     } else {
-      cart.items.push({ book: bookId, quantity });
+      // Add new item
+      cart.items.push({
+        bookId: book._id,
+        quantity: quantity,
+        price: priceToUse,
+        discount: book.discount || 0,
+        title: book.title,
+        coverImage: book.coverImage
+      });
     }
+
+    // Reduce stock
+    book.stock -= quantity;
+    await book.save();
 
     await cart.save();
-    await cart.populate('items.book', 'title author price coverImage stock');
+    await cart.populate('items.bookId');
 
     res.json({
       success: true,
-      message: 'Item added to cart',
-      cart
+      items: cart.items
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Add to cart error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
-// @desc    Update cart item quantity
-// @route   PUT /api/cart/:bookId
+// ✅ @desc    Update cart item quantity
+// @route   PUT /api/cart
 // @access  Private
-exports.updateCartItem = async (req, res) => {
+exports.updateCart = async (req, res) => {
   try {
-    const { bookId } = req.params;
-    const { quantity } = req.body;
+    const { bookId, quantity } = req.body;
 
-    const book = await Book.findById(bookId);
-    if (!book) {
-      return res.status(404).json({ message: 'Book not found' });
-    }
-    if (book.stock < quantity) {
-      return res.status(400).json({ message: 'Not enough stock available' });
+    if (!bookId || quantity === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Book ID and quantity are required'
+      });
     }
 
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) {
-      return res.status(404).json({ message: 'Cart not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Cart not found' 
+      });
     }
 
-    const item = cart.items.find(item => item.book.toString() === bookId);
-    if (!item) {
-      return res.status(404).json({ message: 'Item not found in cart' });
+    const itemIndex = cart.items.findIndex(
+      item => item.bookId.toString() === bookId
+    );
+
+    if (itemIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Item not found in cart' 
+      });
     }
 
-    item.quantity = quantity;
+    if (quantity <= 0) {
+      // Remove item if quantity is 0 or negative
+      cart.items.splice(itemIndex, 1);
+    } else {
+      // Update quantity
+      const book = await Book.findById(bookId);
+      if (book && book.stock < quantity) {
+        return res.status(400).json({ 
+          success: false,
+          message: `Only ${book.stock} items available` 
+        });
+      }
+      cart.items[itemIndex].quantity = quantity;
+    }
+
     await cart.save();
-    await cart.populate('items.book', 'title author price coverImage stock');
+    await cart.populate('items.bookId');
 
     res.json({
       success: true,
-      message: 'Cart updated',
-      cart
+      items: cart.items
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Update cart error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
-// @desc    Remove item from cart
+// ✅ @desc    Remove item from cart
 // @route   DELETE /api/cart/:bookId
 // @access  Private
 exports.removeFromCart = async (req, res) => {
@@ -117,33 +192,58 @@ exports.removeFromCart = async (req, res) => {
 
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) {
-      return res.status(404).json({ message: 'Cart not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Cart not found' 
+      });
     }
 
-    cart.items = cart.items.filter(item => item.book.toString() !== bookId);
+    // Filter out the item
+    cart.items = cart.items.filter(
+      item => item.bookId.toString() !== bookId
+    );
+
     await cart.save();
-    await cart.populate('items.book', 'title author price coverImage stock');
+    await cart.populate('items.bookId');
 
     res.json({
       success: true,
-      message: 'Item removed from cart',
-      cart
+      items: cart.items
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-// Add this to cartController.js
-exports.clearCart = async (req, res) => {
-  try {
-    await Cart.findOneAndUpdate(
-      { user: req.user.id },
-      { items: [] },
-      { new: true }
-    );
-    res.json({ success: true, message: 'Cart cleared' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Remove from cart error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
+// ✅ @desc    Clear cart
+// @route   DELETE /api/cart
+// @access  Private
+exports.clearCart = async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ user: req.user.id });
+    if (!cart) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Cart not found' 
+      });
+    }
+
+    cart.items = [];
+    await cart.save();
+
+    res.json({
+      success: true,
+      items: []
+    });
+  } catch (error) {
+    console.error('❌ Clear cart error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};

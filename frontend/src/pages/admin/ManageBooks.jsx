@@ -1,7 +1,7 @@
 // src/pages/admin/ManageBooks.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Tag } from 'lucide-react';
 import axios from 'axios';
 
 const ManageBooks = () => {
@@ -21,7 +21,9 @@ const ManageBooks = () => {
     rating: '',
     publishedYear: '',
     pages: '',
-    publisher: ''
+    publisher: '',
+    discount: '',
+    previousDiscount: ''
   });
 
   const token = localStorage.getItem('token');
@@ -44,12 +46,23 @@ const ManageBooks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const dataToSend = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        discount: parseFloat(formData.discount) || 0,
+        previousDiscount: parseFloat(formData.previousDiscount) || 0,
+        rating: parseFloat(formData.rating) || 0,
+        publishedYear: parseInt(formData.publishedYear) || null,
+        pages: parseInt(formData.pages) || null
+      };
+
       if (editingBook) {
-        await axios.put(`http://localhost:5000/api/admin/books/${editingBook._id}`, formData, {
+        await axios.put(`http://localhost:5000/api/admin/books/${editingBook._id}`, dataToSend, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post('http://localhost:5000/api/admin/books', formData, {
+        await axios.post('http://localhost:5000/api/admin/books', dataToSend, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -89,7 +102,9 @@ const ManageBooks = () => {
       rating: '',
       publishedYear: '',
       pages: '',
-      publisher: ''
+      publisher: '',
+      discount: '',
+      previousDiscount: ''
     });
   };
 
@@ -106,9 +121,16 @@ const ManageBooks = () => {
       rating: book.rating || '',
       publishedYear: book.publishedYear || '',
       pages: book.pages || '',
-      publisher: book.publisher || ''
+      publisher: book.publisher || '',
+      discount: book.discount || '',
+      previousDiscount: book.previousDiscount || ''
     });
     setShowModal(true);
+  };
+
+  const getDiscountedPrice = (price, discount) => {
+    if (!discount || discount === 0) return price;
+    return price - (price * discount / 100);
   };
 
   const filteredBooks = books.filter(book =>
@@ -160,57 +182,94 @@ const ManageBooks = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Book</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredBooks.map((book) => (
-                <motion.tr
-                  key={book._id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=50&h=70&fit=crop'}
-                        alt={book.title}
-                        className="w-10 h-14 object-cover rounded"
-                      />
-                      <span className="font-medium text-gray-900">{book.title}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{book.author}</td>
-                  <td className="px-6 py-4 text-gray-900 font-semibold">Rs. {book.price?.toFixed(2)}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      book.stock > 10 ? 'bg-green-100 text-green-700' :
-                      book.stock > 0 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {book.stock}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(book)}
-                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(book._id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
+              {filteredBooks.map((book) => {
+                const discountedPrice = getDiscountedPrice(book.price, book.discount);
+                const hasDiscount = book.discount && book.discount > 0;
+                const hasPreviousDiscount = book.previousDiscount && book.previousDiscount > 0;
+                const discountIncreased = hasDiscount && hasPreviousDiscount && book.discount > book.previousDiscount;
+                
+                return (
+                  <motion.tr
+                    key={book._id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="hover:bg-gray-50"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=50&h=70&fit=crop'}
+                          alt={book.title}
+                          className="w-10 h-14 object-cover rounded"
+                        />
+                        <span className="font-medium text-gray-900">{book.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{book.author}</td>
+                    <td className="px-6 py-4">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="text-gray-400 line-through text-sm">Rs. {book.price?.toFixed(2)}</span>
+                          <span className="text-green-600 font-bold ml-2">Rs. {discountedPrice.toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-900 font-semibold">Rs. {book.price?.toFixed(2)}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {hasDiscount ? (
+                        <div>
+                          {discountIncreased ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs line-through text-gray-400">{book.previousDiscount}%</span>
+                              <span className="px-2 py-1 bg-red-500 text-white rounded-full text-xs font-medium">
+                                {book.discount}%
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                              {book.discount}% OFF
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No discount</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        book.stock > 10 ? 'bg-green-100 text-green-700' :
+                        book.stock > 0 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {book.stock}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(book)}
+                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(book._id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -296,6 +355,40 @@ const ManageBooks = () => {
                       onChange={(e) => setFormData({...formData, coverImage: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Discount (%)</label>
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="number"
+                        name="discount"
+                        value={formData.discount}
+                        onChange={(e) => setFormData({...formData, discount: e.target.value})}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Current discount percentage (0-100%)</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Previous Discount (%)</label>
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="number"
+                        name="previousDiscount"
+                        value={formData.previousDiscount}
+                        onChange={(e) => setFormData({...formData, previousDiscount: e.target.value})}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Previous discount to show strikethrough</p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t">
