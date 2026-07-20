@@ -1,33 +1,28 @@
+// backend/models/Contact.js
 const mongoose = require('mongoose');
 
 const contactSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Name is required'],
-    trim: true,
-    maxlength: [100, 'Name cannot exceed 100 characters']
+    trim: true
   },
   email: {
     type: String,
     required: [true, 'Email is required'],
-    lowercase: true,
     trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    lowercase: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email (e.g., name@domain.com)']
   },
   phone: {
     type: String,
-    trim: true
-  },
-  subject: {
-    type: String,
     trim: true,
-    maxlength: [200, 'Subject cannot exceed 200 characters']
+    default: ''
   },
-  message: {
+  comment: {
     type: String,
     required: [true, 'Message is required'],
-    trim: true,
-    maxlength: [2000, 'Message cannot exceed 2000 characters']
+    trim: true
   },
   status: {
     type: String,

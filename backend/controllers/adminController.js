@@ -2,6 +2,7 @@
 const Order = require('../models/Order');
 const Book = require('../models/Book');
 const User = require('../models/User');
+const Contact = require('../models/Contact');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -11,6 +12,7 @@ exports.getDashboardStats = async (req, res) => {
     const totalUsers = await User.countDocuments();
     const totalBooks = await Book.countDocuments();
     const totalOrders = await Order.countDocuments();
+    const totalContacts = await Contact.countDocuments();
     
     const totalRevenue = await Order.aggregate([
       { $match: { paymentStatus: 'completed' } },
@@ -22,6 +24,27 @@ exports.getDashboardStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
+    // ✅ Get recent reviews
+    const recentReviews = await Book.aggregate([
+      { $unwind: '$reviews' },
+      { $sort: { 'reviews.createdAt': -1 } },
+      { $limit: 5 },
+      {
+        $project: {
+          userName: '$reviews.userName',
+          rating: '$reviews.rating',
+          comment: '$reviews.comment',
+          bookTitle: '$title',
+          createdAt: '$reviews.createdAt'
+        }
+      }
+    ]);
+
+    // ✅ Get recent contacts
+    const recentContacts = await Contact.find()
+      .sort({ createdAt: -1 })
+      .limit(5);
+
     res.json({
       success: true,
       stats: {
@@ -29,11 +52,18 @@ exports.getDashboardStats = async (req, res) => {
         totalBooks,
         totalOrders,
         totalRevenue: totalRevenue[0]?.total || 0,
-        recentOrders
+        recentOrders,
+        recentReviews,
+        recentContacts,
+        totalContacts
       }
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Dashboard Stats Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -49,11 +79,15 @@ exports.getAllUsers = async (req, res) => {
       users 
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Get Users Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
-// ✅ @desc    Update user role - FIXED
+// ✅ @desc    Update user role
 // @route   PUT /api/admin/users/:id/role
 // @access  Private/Admin
 exports.updateUserRole = async (req, res) => {
@@ -61,7 +95,6 @@ exports.updateUserRole = async (req, res) => {
     const { role } = req.body;
     const { id } = req.params;
 
-    // Validate role
     if (!['user', 'admin'].includes(role)) {
       return res.status(400).json({
         success: false,
@@ -69,7 +102,6 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Prevent admin from removing their own admin status
     if (req.user.id === id && role !== 'admin') {
       return res.status(400).json({
         success: false,
@@ -122,7 +154,11 @@ exports.createBook = async (req, res) => {
     const book = await Book.create(bookData);
     res.status(201).json({ success: true, book });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Create Book Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -149,7 +185,11 @@ exports.updateBook = async (req, res) => {
     if (!book) return res.status(404).json({ message: 'Book not found' });
     res.json({ success: true, book });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Update Book Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -161,7 +201,11 @@ exports.deleteBook = async (req, res) => {
     await Book.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Book deleted' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Delete Book Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -180,6 +224,10 @@ exports.updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ message: 'Order not found' });
     res.json({ success: true, order });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Update Order Status Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };

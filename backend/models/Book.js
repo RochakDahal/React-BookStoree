@@ -7,6 +7,10 @@ const reviewSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  userName: {
+    type: String,
+    required: true
+  },
   rating: {
     type: Number,
     required: true,
@@ -15,7 +19,8 @@ const reviewSchema = new mongoose.Schema({
   },
   comment: {
     type: String,
-    default: ''
+    required: true,
+    trim: true
   },
   createdAt: {
     type: Date,
@@ -81,7 +86,6 @@ const bookSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  // ✅ Discount Fields
   discount: {
     type: Number,
     default: 0,

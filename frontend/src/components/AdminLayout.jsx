@@ -7,7 +7,9 @@ import {
   ShoppingBag, 
   Users, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Star,
+  Mail
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -19,6 +21,8 @@ const AdminLayout = () => {
     { path: '/admin/books', icon: BookOpen, label: 'Manage Books' },
     { path: '/admin/orders', icon: ShoppingBag, label: 'Manage Orders' },
     { path: '/admin/users', icon: Users, label: 'Manage Users' },
+    { path: '/admin/reviews', icon: Star, label: 'Manage Reviews' },
+    { path: '/admin/contacts', icon: Mail, label: 'Messages' },
   ];
 
   return (
@@ -59,6 +63,13 @@ const AdminLayout = () => {
             );
           })}
         </nav>
+
+        {/* Footer */}
+        {!collapsed && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+            <p className="text-xs text-gray-400 text-center">BookShell Admin v1.0</p>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}
