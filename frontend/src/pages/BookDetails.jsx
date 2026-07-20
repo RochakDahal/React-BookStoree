@@ -1,4 +1,4 @@
-// src/pages/BookDetails.jsx - Add review section
+// src/pages/BookDetails.jsx - Updated cover image section
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -107,6 +107,9 @@ const BookDetails = () => {
   const discountedPrice = hasDiscount ? price - (price * book.discount / 100) : price;
   const savings = hasDiscount ? price - discountedPrice : 0;
 
+  // ✅ Cover image with fallback
+  const coverImage = book?.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&h=900&fit=crop';
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -140,17 +143,19 @@ const BookDetails = () => {
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Left: Book Cover */}
+          {/* ✅ Left: Book Cover - Full Image */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="relative"
           >
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
               <img
-                src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&h=900&fit=crop'}
+                src={coverImage}
                 alt={book.title}
                 className="w-full h-auto object-cover"
+                style={{ maxHeight: '600px' }}
+                loading="lazy"
               />
               {hasDiscount && (
                 <div className="absolute top-4 left-4 z-10">
@@ -308,7 +313,6 @@ const BookDetails = () => {
               <p className="text-gray-700 leading-relaxed">{book.description}</p>
             </div>
 
-            {/* ✅ Review Section */}
             <ReviewSection 
               bookId={book._id} 
               reviews={reviews} 
