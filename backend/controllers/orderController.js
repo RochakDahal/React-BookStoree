@@ -3,54 +3,74 @@ const Order = require('../models/Order');
 const Book = require('../models/Book');
 const Cart = require('../models/Cart');
 
-// ✅ Create Order
+// ✅ Create Order with Discount Calculation
 exports.createOrder = async (req, res) => {
   try {
-    const { items, totalPrice, deliveryFee, paymentMethod, shippingAddress } = req.body;
+    const { items, deliveryFee, paymentMethod, shippingAddress } = req.body;
 
-    // ✅ Validate items
     if (!items || items.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Order must contain at least one item' 
+      return res.status(400).json({
+        success: false,
+        message: 'Order must contain at least one item'
       });
     }
 
-    // ✅ Validate stock and prepare items
+    let subtotal = 0;
+    let totalDiscount = 0;
     const validatedItems = [];
+
     for (const item of items) {
       const book = await Book.findById(item.bookId);
       if (!book) {
-        return res.status(404).json({ 
-          success: false, 
-          message: `Book not found: ${item.title || 'Unknown'}` 
-        });
-      }
-      
-      if (book.stock < item.quantity) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Insufficient stock for "${book.title}". Available: ${book.stock}` 
+        return res.status(404).json({
+          success: false,
+          message: `Book not found: ${item.title || 'Unknown'}`
         });
       }
 
-      // ✅ Reduce stock
+      if (book.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${book.title}". Available: ${book.stock}`
+        });
+      }
+
+      const hasDiscount = book.discount && book.discount > 0;
+      const originalPrice = book.price;
+      const discountPercent = hasDiscount ? book.discount : 0;
+      const discountedPrice = hasDiscount 
+        ? book.price - (book.price * book.discount / 100) 
+        : book.price;
+
+      const itemSubtotal = originalPrice * item.quantity;
+      const itemDiscount = hasDiscount 
+        ? (originalPrice - discountedPrice) * item.quantity 
+        : 0;
+
+      subtotal += itemSubtotal;
+      totalDiscount += itemDiscount;
+
       book.stock -= item.quantity;
       await book.save();
 
       validatedItems.push({
         bookId: book._id,
         title: book.title,
-        price: book.price,
+        price: originalPrice,
+        discount: discountPercent,
+        discountedPrice: discountedPrice,
         quantity: item.quantity,
         coverImage: book.coverImage || ''
       });
     }
 
-    // ✅ Create order
+    const totalPrice = subtotal - totalDiscount + (deliveryFee || 0);
+
     const order = await Order.create({
       user: req.user.id,
       items: validatedItems,
+      subtotal,
+      totalDiscount,
       totalPrice,
       deliveryFee: deliveryFee || 0,
       paymentMethod,
@@ -59,7 +79,6 @@ exports.createOrder = async (req, res) => {
       orderStatus: 'pending'
     });
 
-    // ✅ Clear user's cart
     await Cart.findOneAndUpdate(
       { user: req.user.id },
       { items: [] }
@@ -72,7 +91,7 @@ exports.createOrder = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create Order Error:', error);
+    console.error('❌ Create Order Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to create order'
@@ -80,7 +99,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// ✅ Get user's orders
+// ✅ Get user's orders with discount details
 exports.getUserOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id })
@@ -92,7 +111,7 @@ exports.getUserOrders = async (req, res) => {
       orders
     });
   } catch (error) {
-    console.error('Get Orders Error:', error);
+    console.error('❌ Get Orders Error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -100,7 +119,7 @@ exports.getUserOrders = async (req, res) => {
   }
 };
 
-// ✅ Get single order
+// ✅ Get single order with discount details - FIXED
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
@@ -114,7 +133,7 @@ exports.getOrderById = async (req, res) => {
       });
     }
 
-    // Check if user owns the order or is admin
+    // ✅ Check if user owns the order or is admin
     if (order.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -127,7 +146,7 @@ exports.getOrderById = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Get Order Error:', error);
+    console.error('❌ Get Order Error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -168,7 +187,7 @@ exports.updateOrderStatus = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Update Order Error:', error);
+    console.error('❌ Update Order Error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -212,7 +231,7 @@ exports.updatePaymentStatus = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Update Payment Error:', error);
+    console.error('❌ Update Payment Error:', error);
     res.status(500).json({
       success: false,
       message: error.message
