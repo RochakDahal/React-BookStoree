@@ -21,7 +21,7 @@ const BookCard = ({ book, index }) => {
   
   const inWishlist = isInWishlist(book._id);
   
-  // ✅ Calculate discount - FIXED
+  // ✅ Calculate discount details
   const hasDiscount = book.discount && book.discount > 0;
   const discountedPrice = hasDiscount ? book.price - (book.price * book.discount / 100) : book.price;
   const savings = hasDiscount ? book.price - discountedPrice : 0;
@@ -45,7 +45,6 @@ const BookCard = ({ book, index }) => {
     setAddingToCart(true);
 
     try {
-      // ✅ Send discounted price to cart
       const result = await addToCart(book._id, 1);
       
       if (result && result.success) {
@@ -101,6 +100,9 @@ const BookCard = ({ book, index }) => {
     return stars;
   };
 
+  // ✅ Get cover image with fallback
+  const coverImage = book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&h=600&fit=crop';
+
   return (
     <Link to={`/books/${book._id}`} className="block">
       <motion.div
@@ -109,7 +111,7 @@ const BookCard = ({ book, index }) => {
         transition={{ delay: index * 0.05 }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 h-full flex flex-col relative"
+        className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 h-full flex flex-col"
       >
         {showSuccess && (
           <motion.div
@@ -122,14 +124,15 @@ const BookCard = ({ book, index }) => {
           </motion.div>
         )}
 
-        {/* Book Cover */}
-        <div className="relative h-56 sm:h-64 overflow-hidden bg-gray-100 shrink-0">
+        {/* ✅ Book Cover - Full Image with proper aspect ratio */}
+        <div className="relative w-full overflow-hidden bg-gray-100" style={{ paddingBottom: '150%' }}>
           <motion.img
-            src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&h=600&fit=crop'}
+            src={coverImage}
             alt={book.title}
-            className="w-full h-full object-cover"
-            animate={{ scale: isHovered ? 1.08 : 1 }}
+            className="absolute top-0 left-0 w-full h-full object-cover"
+            animate={{ scale: isHovered ? 1.05 : 1 }}
             transition={{ duration: 0.3 }}
+            loading="lazy"
           />
           
           {/* ✅ Discount Badge */}

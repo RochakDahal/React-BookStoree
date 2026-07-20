@@ -152,6 +152,7 @@ const Books = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -312,7 +313,7 @@ const Books = () => {
           )}
         </div>
 
-        {/* Books Grid/List */}
+        {/* ✅ Books Grid/List with Full Cover Images */}
         {filteredBooks.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 text-lg">No books found matching your criteria</p>
@@ -326,7 +327,7 @@ const Books = () => {
         ) : (
           <div className={`grid ${
             viewMode === 'grid' 
-              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6' 
+              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6' 
               : 'grid-cols-1 gap-4'
           }`}>
             {filteredBooks.map((book, index) => (
