@@ -1,19 +1,25 @@
 // backend/controllers/reviewController.js
 const Book = require('../models/Book');
 
-// ✅ @desc    Add a review to a book
-// @route   POST /api/books/:id/reviews
-// @access  Private
+// ✅ Add a review
 exports.addReview = async (req, res) => {
   try {
     const { rating, comment } = req.body;
     const bookId = req.params.id;
     const userId = req.user.id;
+    const userName = req.user.firstName + ' ' + req.user.lastName;
 
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
         success: false,
         message: 'Please provide a rating between 1 and 5'
+      });
+    }
+
+    if (!comment || comment.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a comment'
       });
     }
 
@@ -25,6 +31,7 @@ exports.addReview = async (req, res) => {
       });
     }
 
+    // Check if user already reviewed
     const existingReview = book.reviews?.find(
       review => review.user.toString() === userId
     );
@@ -38,8 +45,9 @@ exports.addReview = async (req, res) => {
 
     const review = {
       user: userId,
+      userName: userName,
       rating,
-      comment: comment || ''
+      comment: comment.trim()
     };
 
     if (!book.reviews) {
@@ -47,6 +55,7 @@ exports.addReview = async (req, res) => {
     }
     book.reviews.push(review);
 
+    // Update average rating
     const totalRating = book.reviews.reduce((sum, r) => sum + r.rating, 0);
     book.rating = totalRating / book.reviews.length;
 
@@ -69,9 +78,7 @@ exports.addReview = async (req, res) => {
   }
 };
 
-// ✅ @desc    Update a review
-// @route   PUT /api/books/:id/reviews
-// @access  Private
+// ✅ Update a review
 exports.updateReview = async (req, res) => {
   try {
     const { rating, comment } = req.body;
@@ -105,7 +112,7 @@ exports.updateReview = async (req, res) => {
     }
 
     if (rating) book.reviews[reviewIndex].rating = rating;
-    if (comment !== undefined) book.reviews[reviewIndex].comment = comment;
+    if (comment !== undefined) book.reviews[reviewIndex].comment = comment.trim();
 
     const totalRating = book.reviews.reduce((sum, r) => sum + r.rating, 0);
     book.rating = totalRating / book.reviews.length;
@@ -129,9 +136,7 @@ exports.updateReview = async (req, res) => {
   }
 };
 
-// ✅ @desc    Delete a review
-// @route   DELETE /api/books/:id/reviews
-// @access  Private
+// ✅ Delete a review
 exports.deleteReview = async (req, res) => {
   try {
     const bookId = req.params.id;
@@ -176,6 +181,35 @@ exports.deleteReview = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Delete Review Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// ✅ Get all reviews for a book
+exports.getReviews = async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const book = await Book.findById(bookId).populate('reviews.user', 'firstName lastName');
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      reviews: book.reviews || [],
+      rating: book.rating || 0,
+      totalReviews: book.reviews?.length || 0
+    });
+
+  } catch (error) {
+    console.error('❌ Get Reviews Error:', error);
     res.status(500).json({
       success: false,
       message: error.message
