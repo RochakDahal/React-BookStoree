@@ -15,6 +15,14 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  discount: {
+    type: Number,
+    default: 0
+  },
+  discountedPrice: {
+    type: Number,
+    default: 0
+  },
   quantity: {
     type: Number,
     required: true,
@@ -33,6 +41,14 @@ const orderSchema = new mongoose.Schema({
     required: true
   },
   items: [orderItemSchema],
+  subtotal: {
+    type: Number,
+    default: 0
+  },
+  totalDiscount: {
+    type: Number,
+    default: 0
+  },
   totalPrice: {
     type: Number,
     required: true
@@ -75,6 +91,7 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Generate order number before saving
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();

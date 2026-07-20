@@ -2,8 +2,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { 
+  Package, Clock, CheckCircle, Truck, XCircle, 
+  ArrowRight, Tag
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 const MyOrders = () => {
   const { token } = useAuth();
@@ -17,20 +21,16 @@ const MyOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/orders/my-orders', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await axios.get('http://localhost:5000/api/orders/my-orders', {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setOrders(data.orders || []);
-      } else {
-        setError('Failed to fetch orders');
+      if (response.data.success) {
+        setOrders(response.data.orders || []);
       }
     } catch (error) {
-      setError('Network error: ' + error.message);
+      console.error('❌ Error fetching orders:', error);
+      setError('Failed to fetch orders');
     } finally {
       setLoading(false);
     }
@@ -56,6 +56,15 @@ const MyOrders = () => {
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getPaymentMethodLabel = (method) => {
+    const labels = {
+      cod: 'Cash on Delivery',
+      esewa: 'eSewa',
+      stripe: 'Stripe'
+    };
+    return labels[method] || method;
   };
 
   if (loading) {
@@ -114,37 +123,92 @@ const MyOrders = () => {
                           day: 'numeric'
                         })}
                       </p>
+                      <p className="text-xs text-gray-400">
+                        {getPaymentMethodLabel(order.paymentMethod)}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.orderStatus)}`}>
-                        {order.orderStatus?.charAt(0).toUpperCase() + order.orderStatus?.slice(1) || 'Pending'}
-                      </span>
-                      <span className="text-lg font-bold text-gray-900">
-                        Rs. {order.totalPrice?.toFixed(2) || '0.00'}
-                      </span>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 justify-end">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.orderStatus)}`}>
+                          {order.orderStatus?.charAt(0).toUpperCase() + order.orderStatus?.slice(1) || 'Pending'}
+                        </span>
+                      </div>
+                      <div className="mt-1">
+                        <span className="text-lg font-bold text-gray-900">
+                          Rs. {order.totalPrice?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order Summary with Discount */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="flex flex-wrap justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Subtotal:</span>
+                        <span className="font-medium">Rs. {order.subtotal?.toFixed(2) || '0.00'}</span>
+                      </div>
+                      {order.totalDiscount > 0 && (
+                        <div className="flex items-center gap-2 text-red-600">
+                          <Tag className="w-4 h-4" />
+                          <span>Discount:</span>
+                          <span className="font-medium">- Rs. {order.totalDiscount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      )}
+                      {order.deliveryFee > 0 && (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <span>Delivery:</span>
+                          <span className="font-medium">Rs. {order.deliveryFee?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-teal-600 font-bold">
+                        <span>Total:</span>
+                        <span>Rs. {order.totalPrice?.toFixed(2) || '0.00'}</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Order Items */}
                   <div className="space-y-2">
-                    {order.items?.slice(0, 3).map((item) => (
-                      <div key={item._id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                        <img
-                          src={item.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=60&h=80&fit=crop'}
-                          alt={item.title}
-                          className="w-12 h-16 object-cover rounded"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm">{item.title}</p>
-                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                    {order.items?.slice(0, 3).map((item) => {
+                      const hasDiscount = item.discount && item.discount > 0;
+                      return (
+                        <div key={item._id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                          <img
+                            src={item.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=60&h=80&fit=crop'}
+                            alt={item.title}
+                            className="w-12 h-16 object-cover rounded"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">{item.title}</p>
+                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                            {hasDiscount && (
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs text-gray-400 line-through">
+                                  Rs. {item.price?.toFixed(2)}
+                                </span>
+                                <span className="text-xs font-medium text-teal-600">
+                                  Rs. {item.discountedPrice?.toFixed(2)}
+                                </span>
+                                <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
+                                  {item.discount}% OFF
+                                </span>
+                              </div>
+                            )}
+                            {!hasDiscount && (
+                              <p className="text-xs font-medium text-gray-900">
+                                Rs. {item.price?.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            Rs. {(hasDiscount ? item.discountedPrice : item.price) * item.quantity}
+                          </p>
                         </div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          Rs. {(item.price * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {order.items?.length > 3 && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 text-center">
                         + {order.items.length - 3} more items
                       </p>
                     )}
@@ -154,9 +218,10 @@ const MyOrders = () => {
                   <div className="flex justify-end mt-4 pt-4 border-t border-gray-100">
                     <Link
                       to={`/orders/${order._id}`}
-                      className="text-teal-500 hover:text-teal-600 text-sm font-medium"
+                      className="text-teal-500 hover:text-teal-600 text-sm font-medium flex items-center gap-1"
                     >
-                      View Details →
+                      View Details
+                      <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
                 </div>

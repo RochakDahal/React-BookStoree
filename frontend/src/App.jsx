@@ -14,13 +14,12 @@ import Wishlist from './pages/Wishlist';
 import Checkout from './pages/Checkout';
 import Profile from './pages/Profile';
 import MyOrders from './pages/MyOrders';
+import OrderDetails from './pages/OrderDetails';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
-
-// ✅ Admin Imports
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageBooks from './pages/admin/ManageBooks';
@@ -38,7 +37,7 @@ function App() {
                 <Navbar />
                 <main className="grow pt-16">
                   <Routes>
-                    {/* ========== PUBLIC ROUTES ========== */}
+                    {/* Public Routes */}
                     <Route path="/" element={<Home />} />
                     <Route path="/books" element={<Books />} />
                     <Route path="/books/:id" element={<BookDetails />} />
@@ -47,11 +46,11 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     
-                    {/* ========== PAYMENT ROUTES ========== */}
+                    {/* Payment Routes */}
                     <Route path="/payment-success" element={<PaymentSuccess />} />
                     <Route path="/payment-failure" element={<PaymentFailure />} />
                     
-                    {/* ========== PROTECTED USER ROUTES ========== */}
+                    {/* Protected User Routes */}
                     <Route path="/profile" element={
                       <ProtectedRoute>
                         <Profile />
@@ -62,13 +61,18 @@ function App() {
                         <MyOrders />
                       </ProtectedRoute>
                     } />
+                    <Route path="/orders/:id" element={
+                      <ProtectedRoute>
+                        <OrderDetails />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/checkout" element={
                       <ProtectedRoute>
                         <Checkout />
                       </ProtectedRoute>
                     } />
 
-                    {/* ========== ADMIN ROUTES ========== */}
+                    {/* Admin Routes */}
                     <Route path="/admin" element={
                       <ProtectedRoute>
                         <AdminLayout />

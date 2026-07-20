@@ -78,6 +78,7 @@ const Checkout = () => {
     setError('');
 
     try {
+      // ✅ Order data with discount information
       const orderData = {
         items: cartItems.map(item => ({
           bookId: item.bookId?._id || item.bookId,
@@ -86,7 +87,6 @@ const Checkout = () => {
           quantity: item.quantity,
           coverImage: item.bookId?.coverImage || item.coverImage
         })),
-        totalPrice: grandTotal,
         deliveryFee: deliveryFee,
         paymentMethod: paymentMethod,
         shippingAddress: {
@@ -100,6 +100,7 @@ const Checkout = () => {
 
       console.log('📤 Sending order data:', orderData);
 
+      // ✅ Create order in backend
       const orderResponse = await axios.post(
         'http://localhost:5000/api/orders',
         orderData,
@@ -110,8 +111,9 @@ const Checkout = () => {
 
       const order = orderResponse.data.order;
 
-      // ✅ COD - Confirm immediately
+      // ✅ Handle based on payment method
       if (paymentMethod === 'cod') {
+        // COD - Confirm immediately
         await axios.post(
           'http://localhost:5000/api/payments/cod-confirm',
           { orderId: order._id },
@@ -127,9 +129,7 @@ const Checkout = () => {
           }
         });
         
-      } 
-      // ✅ eSewa - Form submission (DO NOT CHANGE)
-      else if (paymentMethod === 'esewa') {
+      } else if (paymentMethod === 'esewa') {
         console.log('🔄 Initiating eSewa payment...');
         
         const paymentResponse = await axios.post(
@@ -144,6 +144,7 @@ const Checkout = () => {
         console.log('✅ eSewa response:', paymentResponse.data);
 
         if (paymentResponse.data.success) {
+          // ✅ Create and submit eSewa form
           const formData = paymentResponse.data.formData;
           const form = document.createElement('form');
           form.method = 'POST';
@@ -164,10 +165,9 @@ const Checkout = () => {
           setError('Failed to initiate eSewa payment');
           setSubmitting(false);
         }
-      } 
-      // ✅ Stripe - Redirect like eSewa
-      else if (paymentMethod === 'stripe') {
-        console.log('🔄 Initiating Stripe Checkout...');
+        
+      } else if (paymentMethod === 'stripe') {
+        console.log('🔄 Initiating Stripe payment...');
         
         const paymentResponse = await axios.post(
           'http://localhost:5000/api/payments/initiate',
@@ -180,10 +180,15 @@ const Checkout = () => {
 
         console.log('✅ Stripe response:', paymentResponse.data);
 
-        if (paymentResponse.data.success && paymentResponse.data.sessionUrl) {
+        if (paymentResponse.data.success && paymentResponse.data.clientSecret) {
           await clearCart();
-          // ✅ Redirect to Stripe Checkout page (like eSewa)
-          window.location.href = paymentResponse.data.sessionUrl;
+          navigate('/stripe-payment', { 
+            state: { 
+              clientSecret: paymentResponse.data.clientSecret,
+              orderId: order._id,
+              amount: grandTotal
+            }
+          });
         } else {
           setError(paymentResponse.data.message || 'Failed to initiate Stripe payment');
           setSubmitting(false);
@@ -219,6 +224,7 @@ const Checkout = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Form */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -237,6 +243,7 @@ const Checkout = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Full Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Full Name *
@@ -248,15 +255,18 @@ const Checkout = () => {
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
                         errors.fullName ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="John Doe"
                     />
                   </div>
-                  {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
+                  {errors.fullName && (
+                    <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+                  )}
                 </div>
 
+                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email *
@@ -268,15 +278,18 @@ const Checkout = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
                         errors.email ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="john@example.com"
                     />
                   </div>
-                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                  )}
                 </div>
 
+                {/* Phone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phone *
@@ -288,15 +301,18 @@ const Checkout = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
                         errors.phone ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="9841234567"
                     />
                   </div>
-                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                  )}
                 </div>
 
+                {/* City */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     City *
@@ -306,14 +322,17 @@ const Checkout = () => {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
                       errors.city ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="Kathmandu"
                   />
-                  {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+                  {errors.city && (
+                    <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                  )}
                 </div>
 
+                {/* Address */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Address *
@@ -323,15 +342,18 @@ const Checkout = () => {
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
                       errors.address ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="123 Main Street"
                   />
-                  {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+                  {errors.address && (
+                    <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                  )}
                 </div>
               </div>
 
+              {/* Payment Method */}
               <div className="pt-4 border-t border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
                   <CreditCard className="w-5 h-5 text-teal-500" />
@@ -342,6 +364,11 @@ const Checkout = () => {
                   {paymentMethods.map((method) => {
                     const Icon = method.icon;
                     const isSelected = paymentMethod === method.id;
+                    const colorClasses = {
+                      orange: 'from-orange-500 to-orange-600',
+                      green: 'from-green-500 to-green-600',
+                      purple: 'from-purple-500 to-purple-600'
+                    };
                     return (
                       <motion.button
                         key={method.id}
@@ -356,9 +383,7 @@ const Checkout = () => {
                         }`}
                       >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          isSelected 
-                            ? `bg-linear-to-r from-${method.color}-500 to-${method.color}-600 text-white` 
-                            : 'bg-gray-100 text-gray-500'
+                          isSelected ? `bg-linear-to-r ${colorClasses[method.color]} text-white` : 'bg-gray-100 text-gray-500'
                         }`}>
                           <Icon className="w-5 h-5" />
                         </div>
@@ -382,6 +407,7 @@ const Checkout = () => {
                 </div>
               </div>
 
+              {/* Submit Button */}
               <motion.button
                 type="submit"
                 disabled={submitting}
@@ -405,6 +431,7 @@ const Checkout = () => {
             </form>
           </motion.div>
 
+          {/* Right: Order Summary */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -417,28 +444,50 @@ const Checkout = () => {
               </h2>
 
               <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                {cartItems.map((item, index) => (
-                  <motion.div
-                    key={item.bookId?._id || index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <img
-                      src={item.bookId?.coverImage || item.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=120&fit=crop'}
-                      alt={item.bookId?.title || item.title}
-                      className="w-12 h-16 object-cover rounded"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.bookId?.title || item.title}</p>
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      Rs. {((item.bookId?.price || item.price || 0) * item.quantity).toFixed(2)}
-                    </p>
-                  </motion.div>
-                ))}
+                {cartItems.map((item, index) => {
+                  const hasDiscount = item.discount || item.bookId?.discount > 0;
+                  const discountPercent = item.discount || item.bookId?.discount || 0;
+                  const originalPrice = item.bookId?.price || item.price || 0;
+                  const discountedPrice = hasDiscount 
+                    ? originalPrice - (originalPrice * discountPercent / 100) 
+                    : originalPrice;
+                  
+                  return (
+                    <motion.div
+                      key={item.bookId?._id || index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <img
+                        src={item.bookId?.coverImage || item.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=120&fit=crop'}
+                        alt={item.bookId?.title || item.title}
+                        className="w-12 h-16 object-cover rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{item.bookId?.title || item.title}</p>
+                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        {hasDiscount && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 line-through">
+                              Rs. {originalPrice.toFixed(2)}
+                            </span>
+                            <span className="text-xs font-bold text-teal-600">
+                              Rs. {discountedPrice.toFixed(2)}
+                            </span>
+                            <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
+                              {discountPercent}% OFF
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Rs. {(discountedPrice * item.quantity).toFixed(2)}
+                      </p>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               <div className="border-t border-gray-200 mt-4 pt-4 space-y-2">
