@@ -1,10 +1,10 @@
-// src/components/Navbar.jsx
+// src/components/Navbar.jsx - Add Contact link
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, ShoppingCart, User, LogOut, BookOpen, Heart, 
-  Home, ChevronDown, UserCircle, Package, LayoutDashboard
+  Home, ChevronDown, UserCircle, Package, LayoutDashboard, Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -49,21 +49,19 @@ const Navbar = () => {
   const navLinks = [
     { to: '/', icon: Home, label: 'Home' },
     { to: '/books', icon: BookOpen, label: 'Books' },
+    { to: '/contact', icon: Mail, label: 'Contact' },
     { to: '/cart', icon: ShoppingCart, label: 'Cart', badge: cartCount },
     { to: '/wishlist', icon: Heart, label: 'Wishlist' },
   ];
 
-  // ✅ Dropdown items - Hide "My Orders" for admin
   const dropdownItems = [
     { to: '/profile', icon: UserCircle, label: 'My Profile' },
   ];
 
-  // ✅ Only show "My Orders" for regular users (not admin)
   if (user?.role !== 'admin') {
     dropdownItems.push({ to: '/my-orders', icon: Package, label: 'My Orders' });
   }
 
-  // ✅ Add admin dashboard link if user is admin
   if (user?.role === 'admin') {
     dropdownItems.push({ 
       to: '/admin', 

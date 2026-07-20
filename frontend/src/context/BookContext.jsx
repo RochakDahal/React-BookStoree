@@ -10,14 +10,25 @@ export const BookProvider = ({ children }) => {
 
   const fetchBooks = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch('http://localhost:5000/api/books');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('📚 Books fetched in BookContext:', data);
+      
       if (data.success) {
-        setBooks(data.data || []);
+        setBooks(data.books || []);
+      } else {
+        setError(data.message || 'Failed to fetch books');
       }
     } catch (err) {
-      setError(err.message);
+      console.error('❌ Error fetching books:', err);
+      setError(err.message || 'Network error');
     } finally {
       setLoading(false);
     }
@@ -37,7 +48,7 @@ export const BookProvider = ({ children }) => {
 export const useBooks = () => {
   const context = useContext(BookContext);
   if (!context) {
-    throw new Error('useBooks must be used within BookProvider');
+    throw new Error('useBooks must be used within a BookProvider');
   }
   return context;
 };

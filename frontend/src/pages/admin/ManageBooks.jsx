@@ -1,4 +1,4 @@
-// src/pages/admin/ManageBooks.jsx
+// src/pages/admin/ManageBooks.jsx - Add more fields
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Search, Tag } from 'lucide-react';
@@ -184,6 +184,7 @@ const ManageBooks = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pages</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -251,6 +252,7 @@ const ManageBooks = () => {
                         {book.stock}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-gray-600">{book.pages || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
@@ -275,7 +277,6 @@ const ManageBooks = () => {
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div
@@ -339,11 +340,44 @@ const ManageBooks = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Genre</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Genre *</label>
                     <input
                       type="text"
                       value={formData.genre}
                       onChange={(e) => setFormData({...formData, genre: e.target.value})}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Published Year</label>
+                    <input
+                      type="number"
+                      value={formData.publishedYear}
+                      onChange={(e) => setFormData({...formData, publishedYear: e.target.value})}
+                      placeholder="2024"
+                      min="1000"
+                      max="2024"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pages</label>
+                    <input
+                      type="number"
+                      value={formData.pages}
+                      onChange={(e) => setFormData({...formData, pages: e.target.value})}
+                      placeholder="200"
+                      min="1"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Publisher</label>
+                    <input
+                      type="text"
+                      value={formData.publisher}
+                      onChange={(e) => setFormData({...formData, publisher: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
@@ -370,7 +404,6 @@ const ManageBooks = () => {
                         max="100"
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                       />
-                      <p className="text-xs text-gray-400 mt-1">Current discount percentage (0-100%)</p>
                     </div>
                   </div>
                   <div>
@@ -387,7 +420,6 @@ const ManageBooks = () => {
                         max="100"
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                       />
-                      <p className="text-xs text-gray-400 mt-1">Previous discount to show strikethrough</p>
                     </div>
                   </div>
                 </div>

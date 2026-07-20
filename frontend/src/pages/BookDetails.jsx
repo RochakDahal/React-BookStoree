@@ -1,4 +1,4 @@
-// src/pages/BookDetails.jsx
+// src/pages/BookDetails.jsx - Add review section
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -11,6 +11,7 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import ReviewSection from '../components/ReviewSection';
 
 const BookDetails = () => {
   const { id } = useParams();
@@ -25,6 +26,8 @@ const BookDetails = () => {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(0);
 
   useEffect(() => {
     fetchBook();
@@ -35,8 +38,9 @@ const BookDetails = () => {
       setLoading(true);
       const response = await axios.get(`http://localhost:5000/api/books/${id}`);
       const bookData = response.data.book;
-      console.log('📚 Book data:', bookData); // Debug log
       setBook(bookData);
+      setReviews(bookData.reviews || []);
+      setAvgRating(bookData.rating || 0);
       if (bookData && isInWishlist(id)) {
         setAddedToWishlist(true);
       }
@@ -62,7 +66,6 @@ const BookDetails = () => {
 
     setAddingToCart(true);
     try {
-      // ✅ Send discounted price to cart
       const result = await addToCart(book._id, quantity);
       if (result && result.success) {
         alert(`✅ ${book.title} added to cart!`);
@@ -99,7 +102,6 @@ const BookDetails = () => {
     }
   };
 
-  // ✅ Calculate discount details
   const hasDiscount = book?.discount && book.discount > 0;
   const price = book?.price || 0;
   const discountedPrice = hasDiscount ? price - (price * book.discount / 100) : price;
@@ -150,7 +152,6 @@ const BookDetails = () => {
                 alt={book.title}
                 className="w-full h-auto object-cover"
               />
-              {/* ✅ Discount Badge */}
               {hasDiscount && (
                 <div className="absolute top-4 left-4 z-10">
                   <div className="bg-linear-to-r from-red-600 to-red-500 text-white px-6 py-4 rounded-xl shadow-2xl text-center">
@@ -193,7 +194,6 @@ const BookDetails = () => {
               </span>
             </div>
 
-            {/* ✅ Price with Discount */}
             <div className="bg-gray-50 rounded-xl p-6">
               {hasDiscount ? (
                 <div>
@@ -307,6 +307,13 @@ const BookDetails = () => {
               <h3 className="text-lg font-bold text-gray-900 mb-2">Description</h3>
               <p className="text-gray-700 leading-relaxed">{book.description}</p>
             </div>
+
+            {/* ✅ Review Section */}
+            <ReviewSection 
+              bookId={book._id} 
+              reviews={reviews} 
+              rating={avgRating} 
+            />
           </motion.div>
         </div>
       </div>
