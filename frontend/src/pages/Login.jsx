@@ -84,10 +84,10 @@ const Login = () => {
           {/* Mobile Logo */}
           <div className="text-center mb-8 lg:hidden">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-linear-to-rrom-teal-500 to-cyan-500 rounded-xl flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-linear-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">
                 BookShell
               </span>
             </div>
@@ -164,7 +164,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                className="w-full py-3.5 bg-linear-to-r from-teal-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
