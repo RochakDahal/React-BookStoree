@@ -1,8 +1,9 @@
 // src/pages/admin/ManageOrders.jsx
 import { useEffect, useState } from 'react';
-import { Eye, RefreshCw } from 'lucide-react';
+import { Eye, RefreshCw, CheckCircle, XCircle, Clock, Truck, Package } from 'lucide-react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -17,53 +18,110 @@ const ManageOrders = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/orders', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(res.data.orders || []);
       setError('');
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching orders:', error);
       setError('Failed to fetch orders. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (id, status) => {
+  const handleStatusChange = async (id, field, value) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/orders/${id}`, 
-        { orderStatus: status }, 
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+      const updateData = {};
+      if (field === 'orderStatus') updateData.orderStatus = value;
+      if (field === 'paymentStatus') updateData.paymentStatus = value;
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/orders/${id}`,
+        updateData,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      toast.success(`${field} updated successfully`);
       fetchOrders();
     } catch (error) {
-      console.error('Error updating order status:', error);
-      alert('Failed to update order status. Please try again.');
+      console.error('❌ Error updating order:', error);
+      toast.error(error.response?.data?.message || 'Failed to update order');
     }
   };
 
-  const getStatusBadge = (status) => {
+  // ✅ Order Status Badge with Emojis
+  const getOrderStatusBadge = (status) => {
     const styles = {
-      pending: 'bg-yellow-100 text-yellow-700',
-      processing: 'bg-blue-100 text-blue-700',
-      shipped: 'bg-purple-100 text-purple-700',
-      delivered: 'bg-green-100 text-green-700',
-      cancelled: 'bg-red-100 text-red-700'
+      pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      shipped: 'bg-blue-100 text-blue-700 border-blue-200',
+      delivered: 'bg-green-100 text-green-700 border-green-200',
+      cancelled: 'bg-red-100 text-red-700 border-red-200'
     };
-    return styles[status] || styles.pending;
+    const emojis = {
+      pending: '⏳',
+      shipped: '🚚',
+      delivered: '✅',
+      cancelled: '❌'
+    };
+    const labels = {
+      pending: 'Pending',
+      shipped: 'Shipped',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled'
+    };
+    const normalizedStatus = status?.toLowerCase() || 'pending';
+    return (
+      <span className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 border ${styles[normalizedStatus] || styles.pending}`}>
+        <span className="text-sm">{emojis[normalizedStatus] || '⏳'}</span>
+        {labels[normalizedStatus] || 'Pending'}
+      </span>
+    );
   };
 
-  const getPaymentBadge = (method) => {
+  // ✅ Payment Status Badge - ONLY confirmed or failed
+  const getPaymentStatusBadge = (status) => {
     const styles = {
-      cod: 'bg-orange-100 text-orange-700',
-      esewa: 'bg-green-100 text-green-700',
-      stripe: 'bg-purple-100 text-purple-700'
+      confirmed: 'bg-green-100 text-green-700 border-green-200',
+      failed: 'bg-red-100 text-red-700 border-red-200'
     };
-    return styles[method] || styles.cod;
+    const emojis = {
+      confirmed: '✅',
+      failed: '❌'
+    };
+    const labels = {
+      confirmed: 'Confirmed',
+      failed: 'Failed'
+    };
+    const normalizedStatus = status?.toLowerCase() || 'failed';
+    return (
+      <span className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 border ${styles[normalizedStatus] || styles.failed}`}>
+        <span className="text-sm">{emojis[normalizedStatus] || '❌'}</span>
+        {labels[normalizedStatus] || 'Failed'}
+      </span>
+    );
+  };
+
+  // ✅ Payment Method Badge
+  const getPaymentMethodBadge = (method) => {
+    const styles = {
+      cod: 'bg-orange-100 text-orange-700 border-orange-200',
+      esewa: 'bg-purple-100 text-purple-700 border-purple-200',
+      stripe: 'bg-blue-100 text-blue-700 border-blue-200'
+    };
+    const labels = {
+      cod: 'COD',
+      esewa: 'eSewa',
+      stripe: 'Stripe'
+    };
+    const normalizedMethod = method?.toLowerCase() || 'cod';
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${styles[normalizedMethod] || styles.cod}`}>
+        {labels[normalizedMethod] || 'COD'}
+      </span>
+    );
   };
 
   if (loading) {
@@ -91,7 +149,10 @@ const ManageOrders = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Manage Orders</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Manage Orders</h1>
+          <p className="text-gray-500 text-sm mt-1">{orders.length} orders found</p>
+        </div>
         <button 
           onClick={fetchOrders}
           className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -104,65 +165,88 @@ const ManageOrders = () => {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-600 uppercase text-sm">
+            <thead className="bg-gray-50 text-gray-600 uppercase text-sm border-b">
               <tr>
                 <th className="p-4">Order ID</th>
                 <th className="p-4">Customer</th>
                 <th className="p-4">Total</th>
-                <th className="p-4">Payment</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4">Payment Method</th>
+                <th className="p-4">Payment Status</th>
+                <th className="p-4">Order Status</th>
+                <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                  <td colSpan="7" className="p-8 text-center text-gray-500">
                     No orders found
                   </td>
                 </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order._id} className="hover:bg-gray-50">
+                  <tr key={order._id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 font-medium">
-                      {order.orderNumber || order._id.slice(-8).toUpperCase()}
+                      <div>
+                        <div className="text-sm font-bold text-gray-900">
+                          #{order.orderNumber || order._id.slice(-8).toUpperCase()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
                     </td>
                     <td className="p-4">
-                      {order.user?.firstName} {order.user?.lastName}
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {order.user?.firstName} {order.user?.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {order.user?.email}
+                        </div>
+                      </div>
                     </td>
-                    <td className="p-4 font-semibold">
+                    <td className="p-4 font-bold text-gray-900">
                       Rs. {order.totalPrice?.toFixed(2) || '0.00'}
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentBadge(order.paymentMethod)}`}>
-                        {order.paymentMethod?.toUpperCase() || 'N/A'}
-                      </span>
+                      {getPaymentMethodBadge(order.paymentMethod)}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(order.orderStatus)}`}>
-                          {order.orderStatus?.charAt(0).toUpperCase() + order.orderStatus?.slice(1) || 'Pending'}
-                        </span>
+                        {getPaymentStatusBadge(order.paymentStatus)}
                         <select 
-                          value={order.orderStatus} 
-                          onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                          className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          value={order.paymentStatus || 'failed'} 
+                          onChange={(e) => handleStatusChange(order._id, 'paymentStatus', e.target.value)}
+                          className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                         >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value="confirmed">✅ Confirmed</option>
+                          <option value="failed">❌ Failed</option>
                         </select>
                       </div>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        {getOrderStatusBadge(order.orderStatus)}
+                        <select 
+                          value={order.orderStatus || 'pending'} 
+                          onChange={(e) => handleStatusChange(order._id, 'orderStatus', e.target.value)}
+                          className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                        >
+                          <option value="pending">⏳ Pending</option>
+                          <option value="shipped">🚚 Shipped</option>
+                          <option value="delivered">✅ Delivered</option>
+                          <option value="cancelled">❌ Cancelled</option>
+                        </select>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
                       <Link 
-                        to={`/orders/${order._id}`} 
-                        className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-1"
+                        to={`/admin/orders/${order._id}`} 
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg transition-colors text-sm font-medium"
                       >
-                        <Eye className="w-5 h-5" />
-                        <span className="text-sm">View</span>
+                        <Eye className="w-4 h-4" />
+                        View Details
                       </Link>
                     </td>
                   </tr>

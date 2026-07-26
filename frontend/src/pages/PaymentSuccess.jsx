@@ -15,38 +15,37 @@ const PaymentSuccess = () => {
   const [error, setError] = useState('');
 
   const queryParams = new URLSearchParams(location.search);
-  const dataParam = queryParams.get('data');
   const sessionId = queryParams.get('session_id');
   const orderIdFromUrl = queryParams.get('orderId');
   const orderIdFromState = location.state?.orderId;
+  const dataParam = queryParams.get('data');
 
   useEffect(() => {
     const verifyPayment = async () => {
       try {
         console.log('🔍 Verifying payment...');
         console.log('📦 Session ID:', sessionId);
+        console.log('📦 Order ID from URL:', orderIdFromUrl);
         console.log('📦 Data param:', dataParam);
+
+        let orderId = orderIdFromUrl || orderIdFromState;
 
         // ✅ For Stripe - verify session
         if (sessionId) {
           console.log('🔄 Verifying Stripe session...');
           
           const response = await axios.get(
-            `http://localhost:5000/api/payments/stripe/verify-session?sessionId=${sessionId}`
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/stripe/verify-session?sessionId=${sessionId}`
           );
 
           console.log('✅ Verification response:', response.data);
 
           if (response.data.success) {
-            // Fetch the order
-            const orderResponse = await axios.get(
-              `http://localhost:5000/api/orders/${response.data.orderId}`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setOrder(orderResponse.data.order);
-            console.log('✅ Order confirmed:', orderResponse.data.order);
+            orderId = response.data.orderId;
           } else {
             setError(response.data.message || 'Payment verification failed');
+            setLoading(false);
+            return;
           }
         } 
         // ✅ For eSewa - verify with data param
@@ -54,7 +53,7 @@ const PaymentSuccess = () => {
           console.log('🔄 Verifying eSewa payment...');
           
           const response = await axios.get(
-            `http://localhost:5000/api/payments/complete?data=${encodeURIComponent(dataParam)}`
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/complete?data=${encodeURIComponent(dataParam)}`
           );
 
           console.log('✅ Verification response:', response.data);
@@ -62,20 +61,23 @@ const PaymentSuccess = () => {
           if (response.data.success) {
             setOrder(response.data.order);
             console.log('✅ Order confirmed:', response.data.order);
+            setLoading(false);
+            return;
           } else {
             setError(response.data.message || 'Payment verification failed');
+            setLoading(false);
+            return;
           }
-        } 
-        // ✅ For COD or direct success
-        else if (orderIdFromUrl || orderIdFromState) {
-          const orderId = orderIdFromUrl || orderIdFromState;
-          console.log('🔄 Fetching order details...');
-          
-          const response = await axios.get(
-            `http://localhost:5000/api/orders/${orderId}`,
+        }
+
+        // ✅ Fetch the order
+        if (orderId) {
+          const orderResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/${orderId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          setOrder(response.data.order);
+          setOrder(orderResponse.data.order);
+          console.log('✅ Order confirmed:', orderResponse.data.order);
         } else {
           setError('No transaction found');
         }
@@ -97,25 +99,38 @@ const PaymentSuccess = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500"></div>
-        <p className="ml-4 text-gray-600">Verifying your payment...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying your payment...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div className="text-center max-w-md bg-white rounded-2xl shadow-xl p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Package className="w-8 h-8 text-red-500" />
+          </div>
           <h2 className="text-2xl font-bold text-red-600 mb-2">Payment Verification Failed</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => navigate('/my-orders')}
-            className="mt-4 px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
-          >
-            View My Orders
-          </button>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate('/my-orders')}
+              className="px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+            >
+              View My Orders
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -123,8 +138,8 @@ const PaymentSuccess = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div className="text-center max-w-md bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Not Found</h2>
           <button
             onClick={() => navigate('/')}
@@ -156,39 +171,43 @@ const PaymentSuccess = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Successful! 🎉</h1>
         <p className="text-gray-600 mb-8">Thank you for your purchase. Your order has been confirmed.</p>
 
-        {order && (
-          <div className="bg-gray-50 rounded-xl p-6 text-left mb-8">
-            <h3 className="font-semibold text-gray-900 mb-4">Order Details</h3>
-            <div className="space-y-2 text-sm">
+        <div className="bg-gray-50 rounded-xl p-6 text-left mb-8">
+          <h3 className="font-semibold text-gray-900 mb-4">Order Details</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Order ID</span>
+              <span className="font-medium text-gray-900">#{order.orderNumber || order._id.slice(-8).toUpperCase()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Total Amount</span>
+              <span className="font-bold text-teal-600">Rs. {order.totalPrice?.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Payment Method</span>
+              <span className="font-medium text-gray-900 capitalize">{order.paymentMethod}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Payment Status</span>
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                ✅ Confirmed
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Order Status</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                🚚 Shipped
+              </span>
+            </div>
+            {order.transactionId && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Order ID</span>
-                <span className="font-medium text-gray-900">#{order.orderNumber || order._id.slice(-8).toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Amount</span>
-                <span className="font-bold text-teal-600">Rs. {order.totalPrice?.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment Method</span>
-                <span className="font-medium text-gray-900 capitalize">{order.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status</span>
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                  ✅ {order.orderStatus || 'Confirmed'}
+                <span className="text-gray-600">Transaction ID</span>
+                <span className="font-medium text-gray-900 text-xs truncate max-w-50">
+                  {order.transactionId}
                 </span>
               </div>
-              {order.transactionId && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Transaction ID</span>
-                  <span className="font-medium text-gray-900 text-xs truncate max-w-50">
-                    {order.transactionId}
-                  </span>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
