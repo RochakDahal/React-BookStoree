@@ -16,18 +16,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Routes - MAKE SURE THIS EXISTS
+// ✅ Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/books', require('./routes/bookRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
-
-// ✅ ADD THIS - Contact Routes
-app.use('/api/contact', require('./routes/contactRoutes'));  // ← This is for POST /api/contact
-app.use('/api/contacts', require('./routes/contactRoutes')); // ← This is for GET /api/contacts (admin)
+app.use('/api/admin', require('./routes/adminRoutes')); // ✅ Admin routes
+app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/contacts', require('./routes/contactRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -45,7 +43,7 @@ app.use((err, req, res, next) => {
 
 // MongoDB Connection
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/bookshell';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/book';
 
 mongoose.connect(MONGO_URI)
   .then(() => {
@@ -53,6 +51,7 @@ mongoose.connect(MONGO_URI)
     app.listen(PORT, () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);
       console.log(`📡 Health: http://localhost:${PORT}/api/health`);
+      console.log(`📡 Admin Orders: http://localhost:${PORT}/api/admin/orders`);
     });
   })
   .catch((err) => {

@@ -15,7 +15,7 @@ exports.getDashboardStats = async (req, res) => {
     const totalContacts = await Contact.countDocuments();
     
     const totalRevenue = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' } },
+      { $match: { paymentStatus: 'confirmed' } },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ]);
 
@@ -24,7 +24,6 @@ exports.getDashboardStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // ✅ Get recent reviews
     const recentReviews = await Book.aggregate([
       { $unwind: '$reviews' },
       { $sort: { 'reviews.createdAt': -1 } },
@@ -40,7 +39,6 @@ exports.getDashboardStats = async (req, res) => {
       }
     ]);
 
-    // ✅ Get recent contacts
     const recentContacts = await Contact.find()
       .sort({ createdAt: -1 })
       .limit(5);
@@ -87,7 +85,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// ✅ @desc    Update user role
+// @desc    Update user role
 // @route   PUT /api/admin/users/:id/role
 // @access  Private/Admin
 exports.updateUserRole = async (req, res) => {
@@ -129,6 +127,86 @@ exports.updateUserRole = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Update User Role Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Get all orders (Admin)
+// @route   GET /api/admin/orders
+// @access  Private/Admin
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate('user', 'firstName lastName email phone')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: orders.length,
+      orders
+    });
+  } catch (error) {
+    console.error('❌ Get All Orders Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Update order status (Admin)
+// @route   PUT /api/admin/orders/:id
+// @access  Private/Admin
+exports.updateOrderStatusAdmin = async (req, res) => {
+  try {
+    const { orderStatus, paymentStatus } = req.body;
+    const { id } = req.params;
+
+    // ✅ Validate orderStatus
+    const validOrderStatuses = ['pending', 'shipped', 'delivered', 'cancelled'];
+    if (orderStatus && !validOrderStatuses.includes(orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order status. Allowed: pending, shipped, delivered, cancelled'
+      });
+    }
+
+    // ✅ Validate paymentStatus
+    const validPaymentStatuses = ['confirmed', 'failed'];
+    if (paymentStatus && !validPaymentStatuses.includes(paymentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment status. Allowed: confirmed, failed'
+      });
+    }
+
+    const updateData = {};
+    if (orderStatus) updateData.orderStatus = orderStatus;
+    if (paymentStatus) updateData.paymentStatus = paymentStatus;
+
+    const order = await Order.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('user', 'firstName lastName email');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Order updated successfully',
+      order
+    });
+  } catch (error) {
+    console.error('❌ Update Order Error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -202,29 +280,6 @@ exports.deleteBook = async (req, res) => {
     res.json({ success: true, message: 'Book deleted' });
   } catch (error) {
     console.error('❌ Delete Book Error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: error.message 
-    });
-  }
-};
-
-// @desc    Update order status
-// @route   PUT /api/admin/orders/:id
-// @access  Private/Admin
-exports.updateOrderStatus = async (req, res) => {
-  try {
-    const { orderStatus, paymentStatus } = req.body;
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { orderStatus, paymentStatus },
-      { new: true }
-    ).populate('user', 'firstName lastName email');
-    
-    if (!order) return res.status(404).json({ message: 'Order not found' });
-    res.json({ success: true, order });
-  } catch (error) {
-    console.error('❌ Update Order Status Error:', error);
     res.status(500).json({ 
       success: false,
       message: error.message 

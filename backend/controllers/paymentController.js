@@ -32,7 +32,7 @@ exports.initiatePayment = async (req, res) => {
 
     const transactionUuid = generateUniqueId();
 
-    // ✅ eSewa Payment (Working - DO NOT CHANGE)
+    // ✅ eSewa Payment
     if (paymentGateway === 'esewa') {
       console.log('🔄 Processing eSewa payment...');
       
@@ -60,55 +60,71 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    // ✅ Stripe Checkout Session (Redirect like eSewa)
+    // ✅ Stripe Checkout Session - Redirect to Stripe hosted page
     if (paymentGateway === 'stripe') {
       console.log('🔄 Processing Stripe Checkout payment...');
+      console.log('💰 Order amount:', order.totalPrice);
+      console.log('📧 Customer email:', req.user.email);
       
-      // ✅ Create Stripe Checkout Session (redirects to Stripe hosted page)
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'npr',
-              product_data: {
-                name: `BookShell Order #${order.orderNumber || order._id}`,
-                description: `Order containing ${order.items?.length || 0} items`,
+      try {
+        // ✅ Create Stripe Checkout Session
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price_data: {
+                currency: 'npr',
+                product_data: {
+                  name: `BookShell Order #${order.orderNumber || order._id}`,
+                  description: `Order containing ${order.items?.length || 0} items`,
+                },
+                unit_amount: Math.round(order.totalPrice * 100), // Convert to paisa (NPR)
               },
-              unit_amount: Math.round(order.totalPrice * 100), // Convert to paisa
+              quantity: 1,
             },
-            quantity: 1,
+          ],
+          mode: 'payment',
+          customer_email: req.user.email,
+          client_reference_id: order._id.toString(),
+          metadata: {
+            orderId: order._id.toString(),
+            transactionId: transactionUuid
           },
-        ],
-        mode: 'payment',
-        customer_email: req.user.email,
-        client_reference_id: order._id.toString(),
-        metadata: {
-          orderId: order._id.toString(),
+          success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`,
+          cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure`,
+        });
+
+        console.log('✅ Stripe session created:', session.id);
+        console.log('✅ Stripe session URL:', session.url);
+
+        // Save transaction record
+        await Transaction.create({
+          orderId: order._id,
+          user: req.user.id,
+          amount: order.totalPrice,
+          paymentGateway: 'stripe',
+          productId: transactionUuid,
+          transactionId: session.id,
+          status: 'PENDING'
+        });
+
+        // ✅ Return the session URL for redirect
+        return res.json({
+          success: true,
+          paymentMethod: 'stripe',
+          sessionUrl: session.url,  // ✅ This is the Stripe Checkout page URL
+          sessionId: session.id,
           transactionId: transactionUuid
-        },
-        success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`,
-        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure`,
-      });
-
-      // Save transaction record
-      await Transaction.create({
-        orderId: order._id,
-        user: req.user.id,
-        amount: order.totalPrice,
-        paymentGateway: 'stripe',
-        productId: transactionUuid,
-        transactionId: session.id,
-        status: 'PENDING'
-      });
-
-      return res.json({
-        success: true,
-        paymentMethod: 'stripe',
-        sessionUrl: session.url,  // ✅ This is the redirect URL
-        sessionId: session.id,
-        transactionId: transactionUuid
-      });
+        });
+      } catch (stripeError) {
+        console.error('❌ Stripe session creation error:', stripeError);
+        console.error('❌ Stripe error details:', stripeError.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create Stripe checkout session',
+          error: stripeError.message
+        });
+      }
     }
 
     return res.status(400).json({ 
@@ -118,6 +134,7 @@ exports.initiatePayment = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Payment initiation error:', error.message);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Payment initiation failed',
@@ -126,7 +143,7 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
-// ✅ @desc    Complete eSewa payment (callback) - DO NOT CHANGE
+// ✅ @desc    Complete eSewa payment (callback)
 // @route   GET /api/payments/complete
 // @access  Public
 exports.completePayment = async (req, res) => {
@@ -242,12 +259,13 @@ exports.completePayment = async (req, res) => {
         console.log('✅ Transaction created');
       }
 
-      order.paymentStatus = 'completed';
-      order.orderStatus = 'confirmed';
+      // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+      order.paymentStatus = 'confirmed';
+      order.orderStatus = 'shipped';
       order.transactionId = decodedData.transaction_code || 'ESEWA-' + Date.now();
       await order.save();
 
-      console.log('✅ Order confirmed:', order._id);
+      console.log('✅ Order confirmed and shipped:', order._id);
 
       return res.json({
         success: true,
@@ -281,12 +299,13 @@ exports.completePayment = async (req, res) => {
           await transaction.save();
         }
 
-        order.paymentStatus = 'completed';
-        order.orderStatus = 'confirmed';
+        // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+        order.paymentStatus = 'confirmed';
+        order.orderStatus = 'shipped';
         order.transactionId = verifyResponse.data.ref_id || decodedData.transaction_code;
         await order.save();
 
-        console.log('✅ Order confirmed via external verification:', order._id);
+        console.log('✅ Order confirmed and shipped via external verification:', order._id);
 
         return res.json({
           success: true,
@@ -306,8 +325,9 @@ exports.completePayment = async (req, res) => {
           await transaction.save();
         }
 
-        order.paymentStatus = 'completed';
-        order.orderStatus = 'confirmed';
+        // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+        order.paymentStatus = 'confirmed';
+        order.orderStatus = 'shipped';
         order.transactionId = decodedData.transaction_code;
         await order.save();
 
@@ -326,6 +346,7 @@ exports.completePayment = async (req, res) => {
       await transaction.save();
     }
 
+    // ✅ FAILURE: paymentStatus = failed, orderStatus = cancelled
     order.paymentStatus = 'failed';
     order.orderStatus = 'cancelled';
     await order.save();
@@ -361,7 +382,6 @@ exports.verifyStripeSession = async (req, res) => {
 
     console.log('📝 Verifying Stripe session:', sessionId);
 
-    // Retrieve the session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     console.log('✅ Stripe session:', session);
@@ -388,9 +408,10 @@ exports.verifyStripeSession = async (req, res) => {
         await transaction.save();
       }
 
-      if (order.paymentStatus !== 'completed') {
-        order.paymentStatus = 'completed';
-        order.orderStatus = 'confirmed';
+      // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+      if (order.paymentStatus !== 'confirmed') {
+        order.paymentStatus = 'confirmed';
+        order.orderStatus = 'shipped';
         order.transactionId = sessionId;
         await order.save();
       }
@@ -401,6 +422,15 @@ exports.verifyStripeSession = async (req, res) => {
         orderId: orderId
       });
     } else {
+      // ✅ FAILURE: paymentStatus = failed, orderStatus = cancelled
+      const orderId = session.client_reference_id;
+      const order = await Order.findById(orderId);
+      if (order && order.paymentStatus !== 'confirmed') {
+        order.paymentStatus = 'failed';
+        order.orderStatus = 'cancelled';
+        await order.save();
+      }
+
       return res.status(400).json({
         success: false,
         message: 'Payment not completed. Status: ' + session.payment_status
@@ -452,12 +482,13 @@ exports.confirmCOD = async (req, res) => {
       status: 'COMPLETED'
     });
 
-    order.paymentStatus = 'completed';
-    order.orderStatus = 'confirmed';
+    // ✅ COD: paymentStatus = confirmed, orderStatus = shipped
+    order.paymentStatus = 'confirmed';
+    order.orderStatus = 'shipped';
     order.transactionId = `COD-${order.orderNumber || order._id}`;
     await order.save();
 
-    console.log('✅ COD order confirmed:', order._id);
+    console.log('✅ COD order confirmed and shipped:', order._id);
 
     res.json({
       success: true,
@@ -520,12 +551,13 @@ exports.stripeWebhook = async (req, res) => {
         console.log('✅ Transaction updated:', transaction);
       }
 
-      order.paymentStatus = 'completed';
-      order.orderStatus = 'confirmed';
+      // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+      order.paymentStatus = 'confirmed';
+      order.orderStatus = 'shipped';
       order.transactionId = transactionId;
       await order.save();
 
-      console.log('✅ Order confirmed via webhook:', order._id);
+      console.log('✅ Order confirmed and shipped via webhook:', order._id);
     }
 
     if (event.type === 'checkout.session.expired') {
@@ -536,9 +568,11 @@ exports.stripeWebhook = async (req, res) => {
 
       const order = await Order.findById(orderId);
       if (order) {
+        // ✅ FAILURE: paymentStatus = failed, orderStatus = cancelled
         order.paymentStatus = 'failed';
         order.orderStatus = 'cancelled';
         await order.save();
+        console.log('✅ Order marked as cancelled due to expiry:', orderId);
       }
     }
 

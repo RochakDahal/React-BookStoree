@@ -6,9 +6,10 @@ const {
   createBook, 
   updateBook, 
   deleteBook, 
-  updateOrderStatus, 
   getAllUsers,
-  updateUserRole
+  updateUserRole,
+  getAllOrders,
+  updateOrderStatusAdmin
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 const Book = require('../models/Book');
@@ -24,15 +25,16 @@ router.get('/stats', getDashboardStats);
 router.get('/users', getAllUsers);
 router.put('/users/:id/role', updateUserRole);
 
-// Orders
-router.put('/orders/:id', updateOrderStatus);
+// ✅ Orders - Admin
+router.get('/orders', getAllOrders);
+router.put('/orders/:id', updateOrderStatusAdmin);
 
 // Books
 router.post('/books', createBook);
 router.put('/books/:id', updateBook);
 router.delete('/books/:id', deleteBook);
 
-// ✅ Get all reviews (admin)
+// Get all reviews (admin)
 router.get('/reviews', async (req, res) => {
   try {
     const books = await Book.find().populate('reviews.user', 'firstName lastName email');
@@ -46,7 +48,6 @@ router.get('/reviews', async (req, res) => {
         });
       });
     });
-    // Sort by createdAt descending
     allReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json({
       success: true,

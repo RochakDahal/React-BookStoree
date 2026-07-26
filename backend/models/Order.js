@@ -38,7 +38,8 @@ const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   items: [orderItemSchema],
   subtotal: {
@@ -64,12 +65,12 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded'],
-    default: 'pending'
+    enum: ['confirmed', 'failed'], // ✅ ONLY confirmed or failed
+    default: 'failed'
   },
   orderStatus: {
     type: String,
-    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
   shippingAddress: {
