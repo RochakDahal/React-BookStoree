@@ -52,7 +52,7 @@ const ManageOrders = () => {
     }
   };
 
-  // ✅ Order Status Badge with Emojis
+  // ✅ Order Status Badge - NO EMOJIS
   const getOrderStatusBadge = (status) => {
     const styles = {
       pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -60,11 +60,11 @@ const ManageOrders = () => {
       delivered: 'bg-green-100 text-green-700 border-green-200',
       cancelled: 'bg-red-100 text-red-700 border-red-200'
     };
-    const emojis = {
-      pending: '⏳',
-      shipped: '🚚',
-      delivered: '✅',
-      cancelled: '❌'
+    const icons = {
+      pending: Clock,
+      shipped: Truck,
+      delivered: CheckCircle,
+      cancelled: XCircle
     };
     const labels = {
       pending: 'Pending',
@@ -73,32 +73,34 @@ const ManageOrders = () => {
       cancelled: 'Cancelled'
     };
     const normalizedStatus = status?.toLowerCase() || 'pending';
+    const Icon = icons[normalizedStatus] || Clock;
     return (
       <span className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 border ${styles[normalizedStatus] || styles.pending}`}>
-        <span className="text-sm">{emojis[normalizedStatus] || '⏳'}</span>
+        <Icon className="w-3.5 h-3.5" />
         {labels[normalizedStatus] || 'Pending'}
       </span>
     );
   };
 
-  // ✅ Payment Status Badge - ONLY confirmed or failed
+  // ✅ Payment Status Badge - NO EMOJIS
   const getPaymentStatusBadge = (status) => {
     const styles = {
       confirmed: 'bg-green-100 text-green-700 border-green-200',
       failed: 'bg-red-100 text-red-700 border-red-200'
     };
-    const emojis = {
-      confirmed: '✅',
-      failed: '❌'
+    const icons = {
+      confirmed: CheckCircle,
+      failed: XCircle
     };
     const labels = {
       confirmed: 'Confirmed',
       failed: 'Failed'
     };
     const normalizedStatus = status?.toLowerCase() || 'failed';
+    const Icon = icons[normalizedStatus] || XCircle;
     return (
       <span className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 border ${styles[normalizedStatus] || styles.failed}`}>
-        <span className="text-sm">{emojis[normalizedStatus] || '❌'}</span>
+        <Icon className="w-3.5 h-3.5" />
         {labels[normalizedStatus] || 'Failed'}
       </span>
     );
@@ -220,8 +222,8 @@ const ManageOrders = () => {
                           onChange={(e) => handleStatusChange(order._id, 'paymentStatus', e.target.value)}
                           className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                         >
-                          <option value="confirmed">✅ Confirmed</option>
-                          <option value="failed">❌ Failed</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="failed">Failed</option>
                         </select>
                       </div>
                     </td>
@@ -233,10 +235,10 @@ const ManageOrders = () => {
                           onChange={(e) => handleStatusChange(order._id, 'orderStatus', e.target.value)}
                           className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                         >
-                          <option value="pending">⏳ Pending</option>
-                          <option value="shipped">🚚 Shipped</option>
-                          <option value="delivered">✅ Delivered</option>
-                          <option value="cancelled">❌ Cancelled</option>
+                          <option value="pending">Pending</option>
+                          <option value="shipped">Shipped</option>
+                          <option value="delivered">Delivered</option>
+                          <option value="cancelled">Cancelled</option>
                         </select>
                       </div>
                     </td>

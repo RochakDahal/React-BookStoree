@@ -1,10 +1,13 @@
 // backend/controllers/paymentController.js
 const Transaction = require('../models/Transaction');
 const Order = require('../models/Order');
+const User = require('../models/User');
 const { generateUniqueId } = require('../utils/helper');
 const { getEsewaPaymentData } = require('../utils/esewaHelper');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const axios = require('axios');
+const sendEmail = require('../utils/sendEmail');
+const { getOrderConfirmationEmail } = require('../utils/emailTemplates');
 
 // ✅ @desc    Initiate payment (eSewa/Stripe)
 // @route   POST /api/payments/initiate
@@ -64,10 +67,8 @@ exports.initiatePayment = async (req, res) => {
     if (paymentGateway === 'stripe') {
       console.log('🔄 Processing Stripe Checkout payment...');
       console.log('💰 Order amount:', order.totalPrice);
-      console.log('📧 Customer email:', req.user.email);
       
       try {
-        // ✅ Create Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
           payment_method_types: ['card'],
           line_items: [
@@ -78,7 +79,7 @@ exports.initiatePayment = async (req, res) => {
                   name: `BookShell Order #${order.orderNumber || order._id}`,
                   description: `Order containing ${order.items?.length || 0} items`,
                 },
-                unit_amount: Math.round(order.totalPrice * 100), // Convert to paisa (NPR)
+                unit_amount: Math.round(order.totalPrice * 100),
               },
               quantity: 1,
             },
@@ -97,7 +98,6 @@ exports.initiatePayment = async (req, res) => {
         console.log('✅ Stripe session created:', session.id);
         console.log('✅ Stripe session URL:', session.url);
 
-        // Save transaction record
         await Transaction.create({
           orderId: order._id,
           user: req.user.id,
@@ -108,17 +108,15 @@ exports.initiatePayment = async (req, res) => {
           status: 'PENDING'
         });
 
-        // ✅ Return the session URL for redirect
         return res.json({
           success: true,
           paymentMethod: 'stripe',
-          sessionUrl: session.url,  // ✅ This is the Stripe Checkout page URL
+          sessionUrl: session.url,
           sessionId: session.id,
           transactionId: transactionUuid
         });
       } catch (stripeError) {
         console.error('❌ Stripe session creation error:', stripeError);
-        console.error('❌ Stripe error details:', stripeError.message);
         return res.status(500).json({
           success: false,
           message: 'Failed to create Stripe checkout session',
@@ -134,7 +132,6 @@ exports.initiatePayment = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Payment initiation error:', error.message);
-    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Payment initiation failed',
@@ -161,7 +158,6 @@ exports.completePayment = async (req, res) => {
       });
     }
 
-    // Decode the base64 data from eSewa
     let decodedData;
     try {
       const decodedString = Buffer.from(data, 'base64').toString('utf-8');
@@ -178,7 +174,6 @@ exports.completePayment = async (req, res) => {
     const transactionUuid = decodedData.transaction_uuid;
     console.log('📦 Transaction UUID from decoded data:', transactionUuid);
 
-    // Find the order
     let order = null;
     
     if (orderId && orderId !== 'null' && orderId !== 'undefined') {
@@ -259,13 +254,29 @@ exports.completePayment = async (req, res) => {
         console.log('✅ Transaction created');
       }
 
-      // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+      // ✅ UPDATED: paymentStatus = confirmed, orderStatus = pending
       order.paymentStatus = 'confirmed';
-      order.orderStatus = 'shipped';
+      order.orderStatus = 'pending';
       order.transactionId = decodedData.transaction_code || 'ESEWA-' + Date.now();
       await order.save();
 
-      console.log('✅ Order confirmed and shipped:', order._id);
+      console.log('✅ Order confirmed:', order._id);
+
+      // ✅ Send confirmation email
+      try {
+        const user = await User.findById(order.user);
+        if (user && user.email) {
+          const emailHtml = getOrderConfirmationEmail(order, user);
+          await sendEmail({
+            to: user.email,
+            subject: `Order Confirmed! #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+            html: emailHtml
+          });
+          console.log('✅ Confirmation email sent to:', user.email);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send email:', emailError.message);
+      }
 
       return res.json({
         success: true,
@@ -299,13 +310,29 @@ exports.completePayment = async (req, res) => {
           await transaction.save();
         }
 
-        // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+        // ✅ UPDATED: paymentStatus = confirmed, orderStatus = pending
         order.paymentStatus = 'confirmed';
-        order.orderStatus = 'shipped';
+        order.orderStatus = 'pending';
         order.transactionId = verifyResponse.data.ref_id || decodedData.transaction_code;
         await order.save();
 
-        console.log('✅ Order confirmed and shipped via external verification:', order._id);
+        console.log('✅ Order confirmed via external verification:', order._id);
+
+        // ✅ Send confirmation email
+        try {
+          const user = await User.findById(order.user);
+          if (user && user.email) {
+            const emailHtml = getOrderConfirmationEmail(order, user);
+            await sendEmail({
+              to: user.email,
+              subject: `Order Confirmed! #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+              html: emailHtml
+            });
+            console.log('✅ Confirmation email sent to:', user.email);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send email:', emailError.message);
+        }
 
         return res.json({
           success: true,
@@ -325,11 +352,27 @@ exports.completePayment = async (req, res) => {
           await transaction.save();
         }
 
-        // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+        // ✅ UPDATED: paymentStatus = confirmed, orderStatus = pending
         order.paymentStatus = 'confirmed';
-        order.orderStatus = 'shipped';
+        order.orderStatus = 'pending';
         order.transactionId = decodedData.transaction_code;
         await order.save();
+
+        // ✅ Send confirmation email
+        try {
+          const user = await User.findById(order.user);
+          if (user && user.email) {
+            const emailHtml = getOrderConfirmationEmail(order, user);
+            await sendEmail({
+              to: user.email,
+              subject: `Order Confirmed! #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+              html: emailHtml
+            });
+            console.log('✅ Confirmation email sent to:', user.email);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send email:', emailError.message);
+        }
 
         return res.json({
           success: true,
@@ -408,12 +451,28 @@ exports.verifyStripeSession = async (req, res) => {
         await transaction.save();
       }
 
-      // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+      // ✅ UPDATED: paymentStatus = confirmed, orderStatus = pending
       if (order.paymentStatus !== 'confirmed') {
         order.paymentStatus = 'confirmed';
-        order.orderStatus = 'shipped';
+        order.orderStatus = 'pending';
         order.transactionId = sessionId;
         await order.save();
+      }
+
+      // ✅ Send confirmation email
+      try {
+        const user = await User.findById(order.user);
+        if (user && user.email) {
+          const emailHtml = getOrderConfirmationEmail(order, user);
+          await sendEmail({
+            to: user.email,
+            subject: `Order Confirmed! #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+            html: emailHtml
+          });
+          console.log('✅ Confirmation email sent to:', user.email);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send email:', emailError.message);
       }
 
       return res.json({
@@ -482,13 +541,29 @@ exports.confirmCOD = async (req, res) => {
       status: 'COMPLETED'
     });
 
-    // ✅ COD: paymentStatus = confirmed, orderStatus = shipped
+    // ✅ UPDATED: paymentStatus = confirmed, orderStatus = pending
     order.paymentStatus = 'confirmed';
-    order.orderStatus = 'shipped';
+    order.orderStatus = 'pending';
     order.transactionId = `COD-${order.orderNumber || order._id}`;
     await order.save();
 
-    console.log('✅ COD order confirmed and shipped:', order._id);
+    console.log('✅ COD order confirmed:', order._id);
+
+    // ✅ Send confirmation email
+    try {
+      const user = await User.findById(order.user);
+      if (user && user.email) {
+        const emailHtml = getOrderConfirmationEmail(order, user);
+        await sendEmail({
+          to: user.email,
+          subject: `Order Confirmed! #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+          html: emailHtml
+        });
+        console.log('✅ Confirmation email sent to:', user.email);
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send email:', emailError.message);
+    }
 
     res.json({
       success: true,
@@ -551,13 +626,29 @@ exports.stripeWebhook = async (req, res) => {
         console.log('✅ Transaction updated:', transaction);
       }
 
-      // ✅ SUCCESS: paymentStatus = confirmed, orderStatus = shipped
+      // ✅ UPDATED: paymentStatus = confirmed, orderStatus = pending
       order.paymentStatus = 'confirmed';
-      order.orderStatus = 'shipped';
+      order.orderStatus = 'pending';
       order.transactionId = transactionId;
       await order.save();
 
-      console.log('✅ Order confirmed and shipped via webhook:', order._id);
+      console.log('✅ Order confirmed via webhook:', order._id);
+
+      // ✅ Send confirmation email
+      try {
+        const user = await User.findById(order.user);
+        if (user && user.email) {
+          const emailHtml = getOrderConfirmationEmail(order, user);
+          await sendEmail({
+            to: user.email,
+            subject: `Order Confirmed! #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+            html: emailHtml
+          });
+          console.log('✅ Confirmation email sent to:', user.email);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send email:', emailError.message);
+      }
     }
 
     if (event.type === 'checkout.session.expired') {
