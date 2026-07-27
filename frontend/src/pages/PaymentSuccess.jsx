@@ -17,7 +17,6 @@ const PaymentSuccess = () => {
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get('session_id');
   const orderIdFromUrl = queryParams.get('orderId');
-  const orderIdFromState = location.state?.orderId;
   const dataParam = queryParams.get('data');
 
   useEffect(() => {
@@ -26,9 +25,8 @@ const PaymentSuccess = () => {
         console.log('🔍 Verifying payment...');
         console.log('📦 Session ID:', sessionId);
         console.log('📦 Order ID from URL:', orderIdFromUrl);
-        console.log('📦 Data param:', dataParam);
 
-        let orderId = orderIdFromUrl || orderIdFromState;
+        let orderId = orderIdFromUrl;
 
         // ✅ For Stripe - verify session
         if (sessionId) {
@@ -168,7 +166,7 @@ const PaymentSuccess = () => {
           <CheckCircle className="w-12 h-12 text-white" />
         </motion.div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Successful! 🎉</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
         <p className="text-gray-600 mb-8">Thank you for your purchase. Your order has been confirmed.</p>
 
         <div className="bg-gray-50 rounded-xl p-6 text-left mb-8">
@@ -189,13 +187,13 @@ const PaymentSuccess = () => {
             <div className="flex justify-between">
               <span className="text-gray-600">Payment Status</span>
               <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                ✅ Confirmed
+                Confirmed
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Order Status</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                🚚 Shipped
+              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                Pending
               </span>
             </div>
             {order.transactionId && (

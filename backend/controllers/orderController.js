@@ -2,6 +2,9 @@
 const Order = require('../models/Order');
 const Book = require('../models/Book');
 const Cart = require('../models/Cart');
+const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
+const { getOrderStatusUpdateEmail } = require('../utils/emailTemplates');
 
 // ✅ Create Order - paymentStatus is set based on payment method
 exports.createOrder = async (req, res) => {
@@ -69,7 +72,6 @@ exports.createOrder = async (req, res) => {
     const totalPrice = subtotal - totalDiscount + (deliveryFee || 0);
 
     // ✅ For COD, paymentStatus is 'confirmed' immediately
-    // For other methods, it will be updated after payment
     const paymentStatus = paymentMethod === 'cod' ? 'confirmed' : 'failed';
 
     const order = await Order.create({
@@ -165,7 +167,7 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-// ✅ Update order status - User can update
+// ✅ Update order status - Sends email notification to user
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -187,7 +189,11 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    // Check if user owns the order or is admin
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = order.user.toString() === req.user.id;
+    
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized to update this order'
@@ -201,8 +207,31 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    const oldStatus = order.orderStatus;
     order.orderStatus = status;
     await order.save();
+
+    console.log(`✅ Order status updated from ${oldStatus} to ${status} for order:`, order._id);
+    console.log(`👤 Updated by: ${isAdmin ? 'Admin' : 'User'}`);
+
+    // ✅ Send status update email to user
+    try {
+      const user = await User.findById(order.user);
+      if (user && user.email) {
+        console.log(`📧 Sending status update email to: ${user.email}`);
+        const emailHtml = getOrderStatusUpdateEmail(order, user, oldStatus, status);
+        await sendEmail({
+          to: user.email,
+          subject: `📦 Order Status Update - #${order.orderNumber || order._id.slice(-8).toUpperCase()}`,
+          html: emailHtml
+        });
+        console.log('✅ Status update email sent to:', user.email);
+      } else {
+        console.log('⚠️ User or email not found, skipping email');
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send status update email:', emailError.message);
+    }
 
     res.json({
       success: true,
@@ -218,7 +247,7 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// ✅ Update payment status - Admin only (NO pending, only confirmed/failed)
+// ✅ Update payment status - Admin only
 exports.updatePaymentStatus = async (req, res) => {
   try {
     const { paymentStatus } = req.body;
@@ -244,6 +273,8 @@ exports.updatePaymentStatus = async (req, res) => {
         message: 'Order not found'
       });
     }
+
+    console.log(`✅ Payment status updated to ${paymentStatus} for order:`, order._id);
 
     res.json({
       success: true,
