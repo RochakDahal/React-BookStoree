@@ -1,13 +1,19 @@
-// src/pages/Profile.jsx
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, MapPin, Phone, Edit2, Save, Shield } from 'lucide-react';
+import { User, Mail, MapPin, Phone, Edit2, Save, Shield, Lock, Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const Profile = () => {
   const { user, token } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -16,6 +22,11 @@ const Profile = () => {
     address: '',
     city: '',
     gender: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -37,28 +48,61 @@ const Profile = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/update-profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('user', JSON.stringify(data.user));
+      const response = await axios.put(
+        'http://localhost:5000/api/auth/update-profile',
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         setIsEditing(false);
-        alert('Profile updated successfully!');
+        toast.success('Profile updated successfully!');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile');
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await axios.put(
+        'http://localhost:5000/api/auth/change-password',
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success) {
+        toast.success('Password changed successfully!');
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setShowPasswordForm(false);
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
     }
@@ -72,15 +116,9 @@ const Profile = () => {
     );
   }
 
-  // ✅ Get role display name
-  const getRoleDisplay = () => {
-    if (user.role === 'admin') {
-      return { label: 'Admin', color: 'bg-purple-100 text-purple-700' };
-    }
-    return { label: 'User', color: 'bg-gray-100 text-gray-700' };
-  };
-
-  const role = getRoleDisplay();
+  const role = user.role === 'admin' 
+    ? { label: 'Admin', color: 'bg-purple-100 text-purple-700' }
+    : { label: 'User', color: 'bg-gray-100 text-gray-700' };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -90,7 +128,7 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
-          {/* Header */}
+          
           <div className="bg-linear-to-r from-teal-500 to-cyan-500 px-6 py-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -102,7 +140,6 @@ const Profile = () => {
                     {user.firstName} {user.lastName}
                   </h1>
                   <p className="text-white/80">{user.email}</p>
-                  {/* ✅ Show Role Badge */}
                   <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium ${role.color}`}>
                     <Shield className="w-3 h-3 inline mr-1" />
                     {role.label}
@@ -119,7 +156,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Content */}
+         
           <div className="p-6">
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -138,7 +175,6 @@ const Profile = () => {
                     }`}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Last Name
@@ -154,7 +190,6 @@ const Profile = () => {
                     }`}
                   />
                 </div>
-
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email
@@ -171,7 +206,6 @@ const Profile = () => {
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phone
@@ -191,7 +225,6 @@ const Profile = () => {
                     />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Gender
@@ -212,7 +245,6 @@ const Profile = () => {
                     <option value="prefer not to say">Prefer Not to Say</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     City
@@ -229,7 +261,6 @@ const Profile = () => {
                     placeholder="Kathmandu"
                   />
                 </div>
-
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Address
@@ -263,6 +294,104 @@ const Profile = () => {
                 </motion.button>
               )}
             </form>
+
+            
+            <div className="mt-8 border-t border-gray-200 pt-6">
+              <button
+                onClick={() => setShowPasswordForm(!showPasswordForm)}
+                className="flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium"
+              >
+                <Lock className="w-4 h-4" />
+                {showPasswordForm ? 'Cancel' : 'Change Password'}
+              </button>
+
+              {showPasswordForm && (
+                <motion.form
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  onSubmit={handlePasswordSubmit}
+                  className="mt-4 space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showOldPassword ? 'text' : 'password'}
+                        name="currentPassword"
+                        value={passwordData.currentPassword}
+                        onChange={handlePasswordChange}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOldPassword(!showOldPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        name="newPassword"
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordChange}
+                        required
+                        minLength="6"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                        placeholder="Enter new password (min 6 chars)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        value={passwordData.confirmPassword}
+                        onChange={handlePasswordChange}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Updating...' : 'Update Password'}
+                  </button>
+                </motion.form>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>
