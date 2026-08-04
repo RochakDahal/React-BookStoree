@@ -1,11 +1,12 @@
 // backend/controllers/authController.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
 
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+    expiresIn: process.env.JWT_EXPIRE || '30d'
   });
 };
 
@@ -16,24 +17,24 @@ exports.register = async (req, res) => {
   try {
     const { firstName, lastName, gender, address, city, phone, email, password } = req.body;
 
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists with this email' });
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
     const user = await User.create({
-      firstName,
-      lastName,
-      gender,
-      address,
-      city,
-      phone,
-      email,
-      password
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      gender: gender || 'prefer not to say',
+      address: address || '',
+      city: city || '',
+      phone: phone || '',
+      email: email.toLowerCase().trim(),
+      password: password,
+      role: 'user'
     });
 
     const token = generateToken(user._id);
-
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -43,12 +44,16 @@ exports.register = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        gender: user.gender,
+        address: user.address,
+        city: user.city,
+        phone: user.phone,
         role: user.role
       }
     });
   } catch (error) {
     console.error('❌ Registration Error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -58,6 +63,9 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) {
@@ -74,19 +82,33 @@ exports.login = async (req, res) => {
       success: true,
       message: 'Login successful',
       token,
-      user: { id: user._id, firstName: user.firstName, email: user.email }
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        address: user.address,
+        city: user.city,
+        phone: user.phone,
+        role: user.role
+      }
     });
   } catch (error) {
+    console.error('❌ Login Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Get current logged in user
+// @desc    Get current logged in user profile
 // @route   GET /api/auth/me
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
     res.status(200).json({
       success: true,
       user: {
@@ -103,7 +125,8 @@ exports.getMe = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Get Me Error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -114,7 +137,6 @@ exports.updateProfile = async (req, res) => {
   try {
     const { firstName, lastName, gender, address, city, phone } = req.body;
     const user = await User.findById(req.user.id);
-
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -127,7 +149,6 @@ exports.updateProfile = async (req, res) => {
     user.phone = phone || user.phone;
 
     await user.save();
-
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -156,7 +177,6 @@ exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user = await User.findById(req.user.id).select('+password');
-
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -195,7 +215,6 @@ exports.forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    const sendEmail = require('../utils/sendEmail');
     const html = `
       <h1>Password Reset</h1>
       <p>You requested to reset your password. Click the link below to set a new password:</p>
@@ -245,6 +264,62 @@ exports.resetPassword = async (req, res) => {
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (error) {
     console.error('❌ Reset password error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Register admin user (only if no admin exists)
+// @route   POST /api/auth/register-admin
+// @access  Public
+exports.registerAdmin = async (req, res) => {
+  try {
+    const { firstName, lastName, gender, address, city, phone, email, password } = req.body;
+
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
+    }
+
+    const adminExists = await User.findOne({ role: 'admin' });
+    if (adminExists) {
+      return res.status(400).json({ success: false, message: 'Admin already exists. Only one admin is allowed.' });
+    }
+
+    const userExists = await User.findOne({ email: email.toLowerCase() });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+    }
+
+    const user = await User.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      gender: gender || 'prefer not to say',
+      address: address || '',
+      city: city || '',
+      phone: phone || '',
+      email: email.toLowerCase().trim(),
+      password: password,
+      role: 'admin'
+    });
+
+    const token = generateToken(user._id);
+    res.status(201).json({
+      success: true,
+      message: 'Admin registered successfully',
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        address: user.address,
+        city: user.city,
+        phone: user.phone,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('❌ Admin Registration Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
