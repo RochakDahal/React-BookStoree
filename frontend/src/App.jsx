@@ -21,6 +21,8 @@ import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // ✅ Admin Imports
 import AdminLayout from './components/AdminLayout';
@@ -51,6 +53,8 @@ function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password/:token" element={<ResetPassword />} />
                     
                     {/* ========== PAYMENT ROUTES ========== */}
                     <Route path="/payment-success" element={<PaymentSuccess />} />
