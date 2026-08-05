@@ -1,8 +1,8 @@
-
+// src/pages/Profile.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, MapPin, Phone, Edit2, Save, Shield, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, MapPin, Phone, Edit2, Save, Shield, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -14,6 +14,8 @@ const Profile = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -51,6 +53,8 @@ const Profile = () => {
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData(prev => ({ ...prev, [name]: value }));
+    setPasswordError('');
+    setPasswordSuccess('');
   };
 
   const handleSubmit = async (e) => {
@@ -58,14 +62,14 @@ const Profile = () => {
     setLoading(true);
     try {
       const response = await axios.put(
-        'http://localhost:5000/api/auth/update-profile',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/update-profile`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success) {
         localStorage.setItem('user', JSON.stringify(response.data.user));
         setIsEditing(false);
-        toast.success('Profile updated successfully!');
+        toast.success('✅ Profile updated successfully!');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -77,32 +81,42 @@ const Profile = () => {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
+    setPasswordError('');
+    setPasswordSuccess('');
+
     if (passwordData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      setPasswordError('New password must be at least 6 characters');
+      toast.error('New password must be at least 6 characters');
       return;
     }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      toast.error('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.put(
-        'http://localhost:5000/api/auth/change-password',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/change-password`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       if (response.data.success) {
-        toast.success('Password changed successfully!');
+        setPasswordSuccess('✅ Password updated successfully!');
+        toast.success('✅ Password updated successfully!');
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         setShowPasswordForm(false);
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      const msg = error.response?.data?.message || 'Failed to change password';
+      setPasswordError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -128,7 +142,7 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
-          
+          {/* Header */}
           <div className="bg-linear-to-r from-teal-500 to-cyan-500 px-6 py-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -156,7 +170,7 @@ const Profile = () => {
             </div>
           </div>
 
-         
+          {/* Content */}
           <div className="p-6">
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -295,10 +309,14 @@ const Profile = () => {
               )}
             </form>
 
-            
+            {/* Password Change Section */}
             <div className="mt-8 border-t border-gray-200 pt-6">
               <button
-                onClick={() => setShowPasswordForm(!showPasswordForm)}
+                onClick={() => {
+                  setShowPasswordForm(!showPasswordForm);
+                  setPasswordError('');
+                  setPasswordSuccess('');
+                }}
                 className="flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium"
               >
                 <Lock className="w-4 h-4" />
@@ -312,6 +330,22 @@ const Profile = () => {
                   onSubmit={handlePasswordSubmit}
                   className="mt-4 space-y-4"
                 >
+                  {/* Success Alert */}
+                  {passwordSuccess && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      {passwordSuccess}
+                    </div>
+                  )}
+
+                  {/* Error Alert */}
+                  {passwordError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      {passwordError}
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Current Password
@@ -335,6 +369,7 @@ const Profile = () => {
                       </button>
                     </div>
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       New Password
@@ -359,6 +394,7 @@ const Profile = () => {
                       </button>
                     </div>
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Confirm New Password
@@ -382,12 +418,20 @@ const Profile = () => {
                       </button>
                     </div>
                   </div>
+
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
+                    className="w-full py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {loading ? 'Updating...' : 'Update Password'}
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        Updating...
+                      </>
+                    ) : (
+                      'Update Password'
+                    )}
                   </button>
                 </motion.form>
               )}
