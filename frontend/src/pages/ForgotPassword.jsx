@@ -1,7 +1,7 @@
-
+// src/pages/ForgotPassword.jsx
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -10,23 +10,36 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+
     if (!email) {
+      setErrorMessage('Please enter your email address');
       toast.error('Please enter your email address');
       return;
     }
+
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/forgot-password', { email });
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/forgot-password`,
+        { email }
+      );
       if (response.data.success) {
         setSent(true);
         toast.success('Password reset link sent to your email');
+      } else {
+        setErrorMessage(response.data.message || 'Failed to send reset link');
+        toast.error(response.data.message || 'Failed to send reset link');
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      toast.error(error.response?.data?.message || 'Failed to send reset link');
+      const msg = error.response?.data?.message || 'Failed to send reset link. Please try again.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -39,7 +52,7 @@ const ForgotPassword = () => {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">✅ Check Your Email</h2>
           <p className="text-gray-600 mb-4">
             We've sent a password reset link to <strong>{email}</strong>
           </p>
@@ -71,11 +84,16 @@ const ForgotPassword = () => {
           </p>
         </div>
 
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-red-700 text-sm">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -83,8 +101,8 @@ const ForgotPassword = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="you@example.com"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Kailash@gmail.com"
               />
             </div>
           </div>
@@ -92,9 +110,16 @@ const ForgotPassword = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
+            className="w-full py-3 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading ? 'Sending...' : 'Send Reset Link'}
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                Sending...
+              </>
+            ) : (
+              'Send Reset Link'
+            )}
           </button>
         </form>
 
