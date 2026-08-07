@@ -17,7 +17,7 @@ const Home = () => {
 
   const fetchBooks = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/books');
+      const response = await axios.get('https://react-book-storee-huj6.vercel.app/api/books');
       setBooks(response.data.books);
       setFeaturedBooks(response.data.books.slice(0, 4));
     } catch (error) {

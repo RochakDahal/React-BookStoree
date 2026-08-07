@@ -36,7 +36,7 @@ const BookDetails = () => {
   const fetchBook = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/books/${id}`);
+      const response = await axios.get(`https://react-book-storee-huj6.vercel.app/api/books/${id}`);
       const bookData = response.data.book;
       setBook(bookData);
       setReviews(bookData.reviews || []);

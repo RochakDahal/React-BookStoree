@@ -29,7 +29,7 @@ const ReviewSection = ({ bookId, reviews: initialReviews, rating: initialRating 
 
   const fetchReviews = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/books/${bookId}/reviews`);
+      const response = await axios.get(`https://react-book-storee-huj6.vercel.app/api/books/${bookId}/reviews`);
       if (response.data.success) {
         setReviews(response.data.reviews);
         setAverageRating(response.data.rating);
@@ -57,7 +57,7 @@ const ReviewSection = ({ bookId, reviews: initialReviews, rating: initialRating 
 
     setLoading(true);
     try {
-      const url = `http://localhost:5000/api/books/${bookId}/reviews`;
+      const url = `https://react-book-storee-huj6.vercel.app/api/books/${bookId}/reviews`;
       const method = isEditing ? 'put' : 'post';
       const response = await axios[method](
         url,
@@ -89,7 +89,7 @@ const ReviewSection = ({ bookId, reviews: initialReviews, rating: initialRating 
     setLoading(true);
     try {
       const response = await axios.delete(
-        `http://localhost:5000/api/books/${bookId}/reviews`,
+        `https://react-book-storee-huj6.vercel.app/api/books/${bookId}/reviews`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

@@ -19,7 +19,7 @@ export const CartProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/cart', {
+      const response = await fetch('https://react-book-storee-huj6.vercel.app/api/cart', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -50,7 +50,7 @@ export const CartProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/cart', {
+      const response = await fetch('https://react-book-storee-huj6.vercel.app/api/cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export const CartProvider = ({ children }) => {
     if (!token) return { success: false };
 
     try {
-      const response = await fetch(`http://localhost:5000/api/cart/${bookId}`, {
+      const response = await fetch(`https://react-book-storee-huj6.vercel.app/api/cart/${bookId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -106,7 +106,7 @@ export const CartProvider = ({ children }) => {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/cart', {
+      const response = await fetch('https://react-book-storee-huj6.vercel.app/api/cart', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ export const CartProvider = ({ children }) => {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/cart', {
+      const response = await fetch('https://react-book-storee-huj6.vercel.app/api/cart', {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

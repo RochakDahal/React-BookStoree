@@ -90,7 +90,7 @@ const CheckoutStripe = () => {
       try {
         const token = localStorage.getItem('token');
         const response = await axios.post(
-          'http://localhost:5000/api/payments/stripe/create-intent',
+          'https://react-book-storee-huj6.vercel.app/api/payments/stripe/create-intent',
           { orderId: order._id },
           { headers: { Authorization: `Bearer ${token}` } }
         );

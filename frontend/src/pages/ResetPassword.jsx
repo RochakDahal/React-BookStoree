@@ -37,7 +37,7 @@ const ResetPassword = () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/reset-password`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/auth/reset-password`,
         { token, newPassword }
       );
 

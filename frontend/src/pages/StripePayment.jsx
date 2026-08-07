@@ -56,7 +56,7 @@ const CheckoutForm = ({ clientSecret, orderId, amount }) => {
         // Verify with backend
         try {
           await axios.post(
-            'http://localhost:5000/api/payments/stripe/verify',
+            'https://react-book-storee-huj6.vercel.app/api/payments/stripe/verify',
             { 
               orderId: orderId,
               paymentIntentId: paymentIntent.id 

@@ -29,7 +29,7 @@ const Books = () => {
   // ✅ Direct fetch as fallback
   const fetchBooksDirectly = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/books`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/books`);
       if (response.data.success) {
         return response.data.books;
       }

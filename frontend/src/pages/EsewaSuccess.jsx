@@ -21,7 +21,7 @@ const EsewaSuccess = () => {
 
       try {
         const token = localStorage.getItem('token');
-        await axios.get(`http://localhost:5000/api/payments/esewa/verify?oid=${oid}&amt=${amt}&refId=${refId}`, {
+        await axios.get(`https://react-book-storee-huj6.vercel.app/api/payments/esewa/verify?oid=${oid}&amt=${amt}&refId=${refId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         // Clear cart and redirect to success page

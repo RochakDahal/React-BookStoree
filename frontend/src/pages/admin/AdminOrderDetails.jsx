@@ -37,7 +37,7 @@ const AdminOrderDetails = () => {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/orders/${id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/admin/orders/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrder(response.data.order);
@@ -57,7 +57,7 @@ const AdminOrderDetails = () => {
       if (field === 'paymentStatus') updateData.paymentStatus = value;
 
       await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/orders/${id}`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/admin/orders/${id}`,
         updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

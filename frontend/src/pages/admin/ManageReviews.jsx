@@ -18,7 +18,7 @@ const ManageReviews = () => {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/admin/reviews', {
+      const res = await axios.get('https://react-book-storee-huj6.vercel.app/api/admin/reviews', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setReviews(res.data.reviews || []);
@@ -35,7 +35,7 @@ const ManageReviews = () => {
     if (!window.confirm('Are you sure you want to delete this review?')) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/books/${bookId}/reviews`, {
+      await axios.delete(`https://react-book-storee-huj6.vercel.app/api/books/${bookId}/reviews`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchReviews();

@@ -23,7 +23,7 @@ const GlobalSearch = () => {
     const delayDebounce = setTimeout(async () => {
       if (query.length > 2) {
         try {
-          const res = await axios.get(`http://localhost:5000/api/books?search=${query}`);
+          const res = await axios.get(`https://react-book-storee-huj6.vercel.app/api/books?search=${query}`);
           setResults(res.data.books.slice(0, 5));
           setIsOpen(true);
         } catch (error) {

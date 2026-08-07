@@ -18,7 +18,7 @@ const ManageUsers = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/admin/users', {
+      const res = await axios.get('https://react-book-storee-huj6.vercel.app/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('📋 Users fetched:', res.data);
@@ -43,7 +43,7 @@ const ManageUsers = () => {
       setUpdating(true);
       
       const response = await axios.put(
-        `http://localhost:5000/api/admin/users/${userId}/role`,
+        `https://react-book-storee-huj6.vercel.app/api/admin/users/${userId}/role`,
         { role: newRole },
         { 
           headers: { 

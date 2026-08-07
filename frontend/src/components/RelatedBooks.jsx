@@ -8,7 +8,7 @@ const RelatedBooks = ({ currentBookId, genre }) => {
   useEffect(() => {
     const fetchRelated = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/books?genre=${genre}`);
+        const res = await axios.get(`https://react-book-storee-huj6.vercel.app/api/books?genre=${genre}`);
         setBooks(res.data.books.filter(b => b._id !== currentBookId).slice(0, 4));
       } catch (error) {
         console.error(error);

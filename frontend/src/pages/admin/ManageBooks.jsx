@@ -34,7 +34,7 @@ const ManageBooks = () => {
 
   const fetchBooks = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/books');
+      const res = await axios.get('https://react-book-storee-huj6.vercel.app/api/books');
       setBooks(res.data.books || []);
     } catch (error) {
       console.error('Error fetching books:', error);
@@ -58,11 +58,11 @@ const ManageBooks = () => {
       };
 
       if (editingBook) {
-        await axios.put(`http://localhost:5000/api/admin/books/${editingBook._id}`, dataToSend, {
+        await axios.put(`https://react-book-storee-huj6.vercel.app/api/admin/books/${editingBook._id}`, dataToSend, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post('http://localhost:5000/api/admin/books', dataToSend, {
+        await axios.post('https://react-book-storee-huj6.vercel.app/api/admin/books', dataToSend, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -79,7 +79,7 @@ const ManageBooks = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this book?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/books/${id}`, {
+        await axios.delete(`https://react-book-storee-huj6.vercel.app/api/admin/books/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         fetchBooks();

@@ -35,7 +35,7 @@ const OrderDetails = () => {
       console.log('🔍 Fetching order:', id);
       console.log('🔑 Token:', token);
 
-      const response = await axios.get(`http://localhost:5000/api/orders/${id}`, {
+      const response = await axios.get(`https://react-book-storee-huj6.vercel.app/api/orders/${id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

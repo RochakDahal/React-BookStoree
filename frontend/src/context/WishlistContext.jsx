@@ -23,7 +23,7 @@ export const WishlistProvider = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:5000/api/wishlist', {
+      const response = await fetch('https://react-book-storee-huj6.vercel.app/api/wishlist', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -58,7 +58,7 @@ export const WishlistProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/wishlist/${bookId}`, {
+      const response = await fetch(`https://react-book-storee-huj6.vercel.app/api/wishlist/${bookId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -86,7 +86,7 @@ export const WishlistProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/wishlist/${bookId}`, {
+      const response = await fetch(`https://react-book-storee-huj6.vercel.app/api/wishlist/${bookId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -12,7 +12,7 @@ export const BookProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:5000/api/books');
+      const response = await fetch('https://react-book-storee-huj6.vercel.app/api/books');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

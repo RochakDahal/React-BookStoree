@@ -74,7 +74,7 @@ const Checkout = () => {
       console.log('📝 Creating order:', orderData);
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/orders`,
         orderData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -93,7 +93,7 @@ const Checkout = () => {
   const confirmCODOrder = async (orderId) => {
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/cod-confirm`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/payments/cod-confirm`,
         { orderId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -113,7 +113,7 @@ const Checkout = () => {
       console.log('💰 Initiating Stripe payment for order:', orderId);
       
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/initiate`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/payments/initiate`,
         {
           orderId: orderId,
           paymentGateway: 'stripe'
@@ -145,7 +145,7 @@ const Checkout = () => {
       console.log('💰 Initiating eSewa payment for order:', orderId);
       
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/initiate`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/payments/initiate`,
         {
           orderId: orderId,
           paymentGateway: 'esewa'

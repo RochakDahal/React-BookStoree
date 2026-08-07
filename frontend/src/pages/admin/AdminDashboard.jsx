@@ -22,7 +22,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/admin/stats', {
+      const res = await axios.get('https://react-book-storee-huj6.vercel.app/api/admin/stats', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(res.data.stats);

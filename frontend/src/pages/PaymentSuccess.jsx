@@ -33,7 +33,7 @@ const PaymentSuccess = () => {
           console.log('🔄 Verifying Stripe session...');
           
           const response = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/stripe/verify-session?sessionId=${sessionId}`
+            `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/payments/stripe/verify-session?sessionId=${sessionId}`
           );
 
           console.log('✅ Verification response:', response.data);
@@ -51,7 +51,7 @@ const PaymentSuccess = () => {
           console.log('🔄 Verifying eSewa payment...');
           
           const response = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/complete?data=${encodeURIComponent(dataParam)}`
+            `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/payments/complete?data=${encodeURIComponent(dataParam)}`
           );
 
           console.log('✅ Verification response:', response.data);
@@ -71,7 +71,7 @@ const PaymentSuccess = () => {
         // ✅ Fetch the order
         if (orderId) {
           const orderResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/${orderId}`,
+            `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/orders/${orderId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           setOrder(orderResponse.data.order);

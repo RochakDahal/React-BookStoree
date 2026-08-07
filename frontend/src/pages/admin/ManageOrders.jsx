@@ -18,7 +18,7 @@ const ManageOrders = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/orders`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/admin/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(res.data.orders || []);
@@ -39,7 +39,7 @@ const ManageOrders = () => {
       if (field === 'paymentStatus') updateData.paymentStatus = value;
 
       await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/orders/${id}`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/admin/orders/${id}`,
         updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

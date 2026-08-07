@@ -62,7 +62,7 @@ const Profile = () => {
     setLoading(true);
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/update-profile`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/auth/update-profile`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -98,7 +98,7 @@ const Profile = () => {
     setLoading(true);
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/change-password`,
+        `${import.meta.env.VITE_API_URL || 'https://react-book-storee-huj6.vercel.app'}/api/auth/change-password`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword

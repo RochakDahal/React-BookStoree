@@ -111,7 +111,7 @@ const Contact = () => {
 
       console.log('📤 Sending contact form:', payload);
 
-      const response = await axios.post('http://localhost:5000/api/contact', payload);
+      const response = await axios.post('https://react-book-storee-huj6.vercel.app/api/contact', payload);
       
       console.log('✅ Contact response:', response.data);
 

@@ -19,7 +19,7 @@ const ManageContacts = () => {
   const fetchContacts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/contacts', {
+      const res = await axios.get('https://react-book-storee-huj6.vercel.app/api/contacts', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContacts(res.data.contacts || []);
@@ -36,7 +36,7 @@ const ManageContacts = () => {
     try {
       setUpdating(true);
       await axios.put(
-        `http://localhost:5000/api/contacts/${id}`,
+        `https://react-book-storee-huj6.vercel.app/api/contacts/${id}`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -52,7 +52,7 @@ const ManageContacts = () => {
   const deleteContact = async (id) => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/contacts/${id}`, {
+      await axios.delete(`https://react-book-storee-huj6.vercel.app/api/contacts/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchContacts();
